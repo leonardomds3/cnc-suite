@@ -76,3 +76,49 @@ Decisão já tomada sobre como começar:
 
 A regra de ouro continua: começar pelo que é simples e sólido, e só subir de nível
 quando o chão de fábrica pedir.
+
+---
+
+## Decisões firmes e o que NÃO fazer
+
+Esta seção é trave de segurança. Se numa sessão futura bater a tentação de "resolver
+rápido" contrariando o que está aqui, PARE — essas escolhas já foram feitas e testadas
+no pensamento. Reabrir sem motivo forte é retrabalho.
+
+### 1. A estratégia é lida por um INTERPRETADOR, em tempo de execução
+
+A estratégia de usinagem **deve** ser processada por um interpretador que lê o JSON
+na hora de gerar o código. O fluxo é sempre este:
+
+1. **Ler os inputs** (os parâmetros que o usuário informou).
+2. **Calcular as derivadas** (as contas que saem desses inputs).
+3. **Checar os avisos** (validações).
+4. **Resolver os placeholders do template** (trocar os campos pelos valores).
+5. **Emitir as linhas** de G-code.
+
+**O JSON é a fonte da verdade.** O motor obedece ao JSON, não o contrário.
+
+### 2. PROIBIDO hardcodar estratégia como operação fixa no DEFS
+
+**Não** transformar a estratégia em código JavaScript fixo dentro do `DEFS`. Pegar um
+template que está no JSON e "traduzir" pra uma função `gerar()` escrita à mão em JS
+**derrota o objetivo do projeto**. O projeto existe pra que o **usuário edite
+estratégias sem programar** — se a lógica volta pro JS, ele fica refém do programador
+de novo.
+
+Isto é um caminho **já rejeitado**. Se aparecer como "atalho", é armadilha: parece
+mais rápido hoje e mata a ideia toda amanhã.
+
+### 3. O que "Nível 1" realmente quer dizer
+
+"Nível 1" = **padrões que o motor conhece, com parâmetros ajustáveis VIA JSON
+interpretado**. Os padrões são conhecidos; os números são editáveis pelo usuário
+através do JSON que o interpretador lê. **Nunca** via código hardcoded. Padrão
+conhecido ≠ padrão engessado em JS.
+
+### 4. Preserve o `estrategias_canal.json`
+
+O arquivo `estrategias_canal.json` já contém a **matemática validada de dois canais**
+e serve de **formato de referência do interpretador** — é o molde de como um JSON de
+estratégia deve ser. **Preserve-o.** Não apague, não sobrescreva sem necessidade real;
+use como base e espelho ao construir o interpretador.
