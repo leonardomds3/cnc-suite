@@ -1,0 +1,2224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Montador Macro · Fanuc Macro B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e1114; --panel:#171b21; --panel-2:#1f242b; --line:#2b323c;
+    --ink:#e8ebee; --ink-2:#9aa4af; --ink-3:#67707a;
+    --amber:#ffb02e; --green:#3ecf8e; --cyan:#4dd0e1; --violet:#b388ff;
+    --blue:#6ea8fe; --red:#f0625a;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Barlow Semi Condensed",system-ui,sans-serif;
+    font-size:16px; line-height:1.5;
+    -webkit-text-size-adjust:100%;
+    -webkit-user-select:none; user-select:none;
+  }
+  input,textarea,select,button{-webkit-user-select:text;user-select:text}
+  .wrap{max-width:1220px;margin:0 auto;padding:14px 12px 70px}
+  @media(min-width:521px){.wrap{padding:20px 16px 70px}}
+
+  header{
+    border:1px solid var(--line);border-radius:var(--radius);
+    background:linear-gradient(180deg,#1c2129,#161a20);
+    padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .badge{
+    width:44px;height:44px;border-radius:9px;flex:0 0 auto;
+    background:var(--amber);color:#1a1205;display:grid;place-items:center;
+    font-weight:700;font-size:13px;letter-spacing:.04em;
+    box-shadow:0 0 0 1px #00000040,0 2px 0 #00000040;position:relative;
+  }
+  .badge::after{
+    content:"";position:absolute;top:-5px;left:8px;right:8px;height:6px;
+    background:
+      radial-gradient(circle 4px at 6px 4px, var(--amber) 60%, transparent 61%),
+      radial-gradient(circle 4px at 50% 4px, var(--amber) 60%, transparent 61%),
+      radial-gradient(circle 4px at calc(100% - 6px) 4px, var(--amber) 60%, transparent 61%);
+  }
+  header h1{margin:0;font-size:21px;font-weight:700;letter-spacing:.02em;line-height:1.05}
+  @media(min-width:521px){header h1{font-size:26px}}
+  header p{margin:2px 0 0;color:var(--ink-2);font-size:13px}
+
+  .cols{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
+  @media(min-width:961px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+    .sticky{position:sticky;top:14px}}
+
+  .card{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:12px;margin-bottom:14px}
+  @media(min-width:521px){.card{padding:16px}}
+  .eyebrow{
+    font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--amber);margin:0 2px 10px;display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+  .eyebrow .n{color:var(--ink-3);letter-spacing:0}
+  .hint{font-size:12.5px;color:var(--ink-3);margin:0 2px 12px;line-height:1.45}
+
+  /* ---- campos ---- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:400px){.grid3{grid-template-columns:1fr 1fr}}
+  .field{margin-bottom:2px;min-width:0}
+  .field label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:3px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inrow{position:relative;display:flex;align-items:center}
+  input[type=number],input[type=text]{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:9px 34px 9px 10px;
+    font-family:"JetBrains Mono",monospace;font-size:14px;outline:none;
+    -webkit-appearance:none;appearance:none;
+  }
+  input[type=text]{padding-right:10px}
+  input:focus{border-color:var(--amber);box-shadow:0 0 0 3px #ffb02e22}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .unit{position:absolute;right:10px;font-size:11px;color:var(--ink-3);pointer-events:none;font-family:"JetBrains Mono",monospace}
+  select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:9px 10px;
+    font-family:"JetBrains Mono",monospace;font-size:13.5px;outline:none;
+    -webkit-appearance:none;appearance:none;
+  }
+  select:focus{border-color:var(--amber);box-shadow:0 0 0 3px #ffb02e22}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);padding:6px 2px;cursor:pointer}
+  .chk input{width:17px;height:17px;accent-color:var(--amber)}
+
+  /* ---- paleta de blocos ---- */
+  .paleta{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+  .pal{
+    position:relative;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);
+    color:var(--ink);padding:12px 10px 9px;text-align:left;cursor:pointer;
+    font-family:inherit;font-size:13.5px;font-weight:600;line-height:1.2;
+    transition:transform .08s ease, border-color .12s;
+  }
+  .pal:active{transform:scale(.96)}
+  .pal small{display:block;font-weight:400;color:var(--ink-3);font-size:11px;margin-top:2px}
+  .pal::before{
+    content:"";position:absolute;top:-4px;left:12px;width:34px;height:8px;border-radius:3px 3px 0 0;
+    background:var(--c,#888);
+  }
+  .pal:hover{border-color:var(--c,#888)}
+  .pal .plus{position:absolute;right:9px;top:9px;color:var(--c,#888);font-weight:700}
+
+  /* ---- pilha (Lego) ---- */
+  .pilha{min-height:60px}
+  .vazio{
+    border:1px dashed var(--line);border-radius:var(--radius);padding:22px 14px;
+    text-align:center;color:var(--ink-3);font-size:13.5px;
+  }
+  .bloco{
+    position:relative;border:1px solid var(--line);border-left:4px solid var(--c,#888);
+    border-radius:8px;background:var(--panel-2);margin-top:15px;
+  }
+  .bloco:first-child{margin-top:6px}
+  .bloco::before{ /* pinos Lego */
+    content:"";position:absolute;top:-7px;left:16px;width:64px;height:7px;
+    background:
+      radial-gradient(circle 5px at 8px 7px, var(--c,#888) 62%, transparent 63%),
+      radial-gradient(circle 5px at 32px 7px, var(--c,#888) 62%, transparent 63%),
+      radial-gradient(circle 5px at 56px 7px, var(--c,#888) 62%, transparent 63%);
+  }
+  .bloco.sel{border-color:var(--c,#888);box-shadow:0 0 0 3px color-mix(in srgb, var(--c,#888) 22%, transparent)}
+  .bhead{display:flex;align-items:center;gap:8px;padding:10px 10px;cursor:pointer}
+  .bnum{
+    flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--c,#888);
+    color:#10130a;font-weight:700;font-size:12.5px;display:grid;place-items:center;
+    font-family:"JetBrains Mono",monospace;
+  }
+  .btit{flex:1;min-width:0;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btit small{color:var(--ink-3);font-weight:400;font-size:11.5px;margin-left:6px}
+  .bacts{display:flex;gap:2px}
+  .ib{
+    width:30px;height:30px;border:none;background:transparent;color:var(--ink-2);
+    border-radius:6px;cursor:pointer;font-size:14px;display:grid;place-items:center;padding:0;
+  }
+  .ib:hover{background:#ffffff12;color:var(--ink)}
+  .ib.del:hover{color:var(--red)}
+  .bbody{padding:2px 10px 12px;border-top:1px solid var(--line)}
+  .bbody .grid3{margin-top:10px}
+  .bbody .sub{
+    font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-3);margin:12px 2px 0;
+  }
+  .bloco.fechado .bbody{display:none}
+  .warnrow{margin-top:10px;font-size:12.5px;color:#ffd58a;background:#3a2c10;border:1px solid #6b4e1a;border-radius:7px;padding:7px 9px;line-height:1.4}
+  .errrow{margin-top:10px;font-size:12.5px;color:#ffb4ae;background:#3a1512;border:1px solid #7a2a24;border-radius:7px;padding:7px 9px;line-height:1.4;font-weight:600}
+
+  /* ---- preview 3D ---- */
+  .vis{position:relative;border:1px solid var(--line);border-radius:9px;background:#0a0d10;overflow:hidden}
+  .vis canvas{display:block;width:100%;height:100%;touch-action:none}
+  #canvasWrap{height:300px}
+  @media(min-width:521px){#canvasWrap{height:380px}}
+  .viewbtns{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+  .vb{
+    border:1px solid var(--line);background:#171b21cc;color:var(--ink-2);border-radius:7px;
+    padding:5px 10px;font-size:11.5px;font-weight:700;letter-spacing:.06em;cursor:pointer;
+    font-family:inherit;backdrop-filter:blur(4px);
+  }
+  .vb.on,.vb:hover{color:var(--amber);border-color:var(--amber)}
+  .legenda{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .lg.imp .x{margin-left:6px;color:var(--ink-3);font-weight:700}
+  .lg.imp .x:hover{color:var(--red)}
+  .lg.imp.off{opacity:.4}
+
+  /* ---- cadastro de macros ---- */
+  .pal .edit{
+    position:absolute;right:8px;bottom:7px;color:var(--ink-3);font-size:12px;
+    padding:2px 4px;border-radius:5px;
+  }
+  .pal .edit:hover{color:var(--amber);background:#ffffff12}
+  .modal{
+    position:fixed;inset:0;background:#000a;z-index:50;display:none;
+    align-items:flex-start;justify-content:center;padding:18px 10px;overflow:auto;
+  }
+  .modal.aberto{display:flex}
+  .mpanel{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    width:100%;max-width:620px;padding:16px;margin:auto 0;
+  }
+  .mpanel h2{margin:0 0 4px;font-size:17px;color:var(--amber)}
+  .mpanel .mh{font-size:12.5px;color:var(--ink-3);margin:0 0 12px;line-height:1.5}
+  .prow{display:grid;grid-template-columns:1fr 1.4fr .8fr .7fr .7fr 30px;gap:6px;margin-bottom:6px;align-items:center}
+  .prow input{padding:7px 8px !important;font-size:12.5px !important}
+  .phead{display:grid;grid-template-columns:1fr 1.4fr .8fr .7fr .7fr 30px;gap:6px;
+    font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:10px 0 4px}
+  #m-codigo{
+    width:100%;min-height:200px;background:#0a0d10;border:1px solid var(--line);color:var(--ink);
+    border-radius:8px;padding:10px;font-family:"JetBrains Mono",monospace;font-size:12.5px;
+    line-height:1.55;outline:none;resize:vertical;white-space:pre;
+  }
+  #m-codigo:focus{border-color:var(--amber)}
+  .mtoken{font-size:11.5px;color:#ffd58a;margin-top:6px;min-height:16px}
+  .corpick{display:flex;gap:8px;margin-top:4px}
+  .corpick button{
+    width:30px;height:30px;border-radius:8px;border:2px solid transparent;cursor:pointer;background:var(--c);
+  }
+  .corpick button.on{border-color:#fff;box-shadow:0 0 0 3px #ffffff33}
+  .vrow{
+    display:grid;grid-template-columns:44px 1fr 62px 70px 1.2fr 32px;gap:6px;align-items:center;
+    margin-bottom:5px;
+  }
+  .vrow b{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--amber)}
+  .vrow input{padding:7px 8px !important;font-size:12.5px !important}
+  .vrow .chk{font-size:11px !important;gap:4px}
+  .vrow .ib{width:30px;height:30px;font-size:13px}
+  .vrow.ok{grid-template-columns:44px 1fr}
+  .vrow .vok{font-size:12px;color:var(--green)}
+  .lg{
+    display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;
+    background:var(--panel-2);padding:4px 10px 4px 6px;font-size:12px;color:var(--ink-2);
+    cursor:pointer;font-family:inherit;
+  }
+  .lg .dot{width:10px;height:10px;border-radius:3px;background:var(--c,#888)}
+  .lg.on{border-color:var(--c,#888);color:var(--ink)}
+  .visoff{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-3);font-size:13px;padding:20px;text-align:center}
+
+  /* ---- código ---- */
+  .codewrap{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#0d0f12}
+  .codehead{
+    display:flex;align-items:center;gap:8px;padding:7px 10px;
+    border-bottom:1px solid #232a32;background:#11141880;font-size:12px;color:var(--ink-3);
+    font-family:"JetBrains Mono",monospace;
+  }
+  .codehead .sp{flex:1}
+  pre#saida{
+    margin:0;padding:12px;max-height:420px;overflow:auto;
+    font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.55;color:#cfe3c8;
+    -webkit-user-select:text;user-select:text;white-space:pre;
+  }
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btn{
+    flex:1;min-width:120px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);
+    color:var(--ink);padding:11px 12px;font-family:inherit;font-size:14.5px;font-weight:600;
+    cursor:pointer;transition:transform .08s;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:var(--amber);border-color:var(--amber);color:#1a1205}
+  .btn.ghost{flex:0 0 auto;min-width:0}
+
+  #toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:var(--amber);color:#1a1205;font-weight:700;font-size:14px;
+    padding:10px 18px;border-radius:99px;opacity:0;pointer-events:none;
+    transition:opacity .2s, transform .2s;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="badge">MM</div>
+    <div>
+      <h1>Montador Macro</h1>
+      <p>Monte usinagens como Lego · Fanuc Macro B · preview 3D</p>
+    </div>
+  </header>
+
+  <div class="cols">
+    <!-- ===================== COLUNA ESQUERDA ===================== -->
+    <div>
+
+      <div class="card">
+        <div class="eyebrow">Programa &amp; Material</div>
+        <p class="hint">Zero peça: <b>X0 Y0 no centro do bloco</b> · <b>Z0 na face superior</b>. Cada bloco especifica a própria ferramenta — a troca só entra no programa quando o T muda de um bloco para o outro.</p>
+        <div class="grid2">
+          <div class="field"><label>Nome do programa</label>
+            <div class="inrow"><input type="text" id="g-nome" value="MONTAGEM1"></div></div>
+          <div class="field"><label>Z de segurança</label>
+            <div class="inrow"><input type="number" id="g-seg" value="25" step="1"><span class="unit">mm</span></div></div>
+        </div>
+        <div class="sub" style="font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:12px 2px 0">Bloco de material</div>
+        <div class="grid3" style="margin-top:8px">
+          <div class="field"><label>Comprimento X</label>
+            <div class="inrow"><input type="number" id="g-bx" value="200" step="5"><span class="unit">mm</span></div></div>
+          <div class="field"><label>Largura Y</label>
+            <div class="inrow"><input type="number" id="g-by" value="140" step="5"><span class="unit">mm</span></div></div>
+          <div class="field"><label>Altura Z</label>
+            <div class="inrow"><input type="number" id="g-bz" value="50" step="5"><span class="unit">mm</span></div></div>
+        </div>
+        <div class="sub" style="font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:12px 2px 0">Parâmetros de corte</div>
+        <p class="hint" style="margin:6px 2px 0">Não há ferramenta padrão: <b>cada bloco define a sua</b> (T/Ø/S/H/D nos campos do card). A calculadora abaixo sugere S e F pela Vc e fz do material.</p>
+        <div class="grid3" style="margin-top:8px">
+          <div class="field"><label>Material da peça</label>
+            <div class="inrow"><select id="g-mat">
+              <option value="alu">Alumínio</option>
+              <option value="acoB" selected>Aço baixo carbono</option>
+              <option value="acoM">Aço médio carbono</option>
+              <option value="inox">Aço inox</option>
+              <option value="fofo">Ferro fundido</option>
+              <option value="latao">Latão / bronze</option>
+              <option value="plast">Plástico / nylon</option>
+            </select></div></div>
+          <div class="field"><label>Ø da fresa</label>
+            <div class="inrow"><input type="number" id="g-cdiam" value="10" step="0.5"><span class="unit">mm</span></div></div>
+          <div class="field"><label>Dentes da fresa (z)</label>
+            <div class="inrow"><input type="number" id="g-z" value="3" step="1" min="1"></div></div>
+        </div>
+        <div class="btnrow" style="margin-top:8px">
+          <button class="btn ghost" id="calcSF" title="Calcula S e F pela Vc e fz do material">⚙ Calcular S/F</button>
+        </div>
+        <div class="hint" id="calcInfo" style="margin:6px 2px 0"></div>
+        <label class="chk" style="margin-top:8px"><input type="checkbox" id="g-g53" checked> G53 Y300 no final (recuar mesa)</label>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Peças de montagem <span class="n">· toque para adicionar</span></div>
+        <div class="paleta" id="paleta"></div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn ghost" id="novoMacro">＋ Cadastrar macro</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Sequência de usinagem <span class="n" id="qtd"></span></div>
+        <div class="pilha" id="pilha"></div>
+        <div class="btnrow">
+          <button class="btn ghost" id="salvarM" title="Baixa a montagem em .json">💾 Salvar montagem</button>
+          <button class="btn ghost" id="abrirM" title="Abre uma montagem .json">📂 Abrir</button>
+          <input type="file" id="fileM" accept=".json" style="display:none">
+          <button class="btn ghost" id="limparM" style="color:var(--red)">✕ Limpar</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================== COLUNA DIREITA ===================== -->
+    <div class="sticky">
+
+      <div class="card">
+        <div class="eyebrow">Preview 3D <span class="n">· arraste para girar · pinça/scroll = zoom</span></div>
+        <div class="vis" id="canvasWrap">
+          <div class="viewbtns">
+            <button class="vb on" data-v="iso">ISO</button>
+            <button class="vb" data-v="topo">TOPO</button>
+            <button class="vb" data-v="frente">FRENTE</button>
+          </div>
+        </div>
+        <div class="legenda" id="legenda"></div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn ghost" id="importNC" title="Simula um programa .NC e desenha o caminho da ferramenta no 3D">⬆ Importar .NC no preview</button>
+          <input type="file" id="fileNC" accept=".nc,.NC,.txt,.tap,.cnc,.mpf,.eia,.min,.prg" multiple style="display:none">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Programa gerado</div>
+        <div id="warns"></div>
+        <div class="codewrap">
+          <div class="codehead"><span id="linhas">0 linhas</span><span class="sp"></span><span id="nomeArq">MONTAGEM1.NC</span></div>
+          <pre id="saida"></pre>
+        </div>
+        <div class="btnrow">
+          <button class="btn primary" id="copiar">Copiar código</button>
+          <button class="btn" id="baixar">Baixar .NC</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<div class="modal" id="modalMacro">
+  <div class="mpanel">
+    <h2 id="m-titulo">Cadastrar macro</h2>
+    <p class="mh">Cole ou escreva o corpo do macro. Use <b>{chave}</b> onde o valor de um parâmetro entra (ex.: <code>#4={prof}</code>). Tokens prontos: <b>{DIAM}</b> Ø da fresa ativa · <b>{RF}</b> raio da fresa. Rótulos <b>N10–N99</b> e os <b>GOTO</b> correspondentes são renumerados automaticamente por bloco — pode colar um macro existente sem medo de colisão.</p>
+    <div class="grid2">
+      <div class="field"><label>Nome do macro</label>
+        <div class="inrow"><input type="text" id="m-nome" placeholder="Ex.: Rebaixo oblongo"></div></div>
+      <div class="field"><label>Subtítulo (estratégia)</label>
+        <div class="inrow"><input type="text" id="m-sub" placeholder="Ex.: contorno com G41"></div></div>
+    </div>
+    <div class="field" style="margin-top:8px"><label>Cor da família</label>
+      <div class="corpick" id="m-cores"></div></div>
+    <div class="phead"><span>chave</span><span>rótulo</span><span>padrão</span><span>passo</span><span>unid.</span><span></span></div>
+    <div id="m-params"></div>
+    <button class="btn ghost" id="m-addparam" style="margin-top:2px">＋ parâmetro</button>
+    <div class="field" style="margin-top:12px"><label>Código Macro B</label></div>
+    <textarea id="m-codigo" spellcheck="false"></textarea>
+    <div class="mtoken" id="m-check"></div>
+    <div class="sub" style="margin-top:10px">Variáveis # do código</div>
+    <p class="mh" style="margin-bottom:6px">Toda variável # que você digitar aparece aqui para declarar o valor inicial. Se o código já tem <code>#n=valor</code>, o campo fecha sozinho. Marque <b>incr.</b> e use ＋ para inserir <code>#n=#n+passo</code> no cursor.</p>
+    <div id="m-vars"></div>
+    <div class="btnrow" style="margin-top:12px">
+      <button class="btn primary" id="m-salvar">Salvar macro</button>
+      <button class="btn" id="m-cancelar">Cancelar</button>
+      <button class="btn ghost" id="m-excluir" style="color:var(--red);display:none">✕ Excluir macro</button>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+/* ============================================================
+   MONTADOR MACRO — Fanuc Macro B
+   Blocos "Lego" de usinagem → programa único + preview 3D
+   ============================================================ */
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const clamp = (n,a,b)=>Math.min(b,Math.max(a,n));
+function num(v,d=0){ const n=parseFloat(v); return isNaN(n)?d:n; }
+function fnum(n){ return (Math.round(n*1000)/1000).toString(); }            // p/ atribuição de variável
+function fx(n){ let s=(Math.round(n*1000)/1000).toString(); if(!s.includes(".")) s+="."; return s; } // p/ coordenada
+function noAcc(s){
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+          .replace(/ç/gi,"C").toUpperCase().replace(/[^A-Z0-9 \-\+\.\/=:#]/g,"");
+}
+function toast(t){ const el=$("toast"); el.textContent=t; el.classList.add("show");
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),1600); }
+
+/* ---------- estado ---------- */
+let SEQ = [];        // [{uid, tipo, aberto, p:{...}}]
+let SELECIONADO = null;
+let UID = 1;
+
+function cfg(){
+  return {
+    nome: ($("g-nome").value||"MONTAGEM1").trim().toUpperCase().replace(/\s+/g,"_"),
+    seg:  num($("g-seg").value,25),
+    bx:   num($("g-bx").value,200), by: num($("g-by").value,140), bz: num($("g-bz").value,50),
+    g53:  $("g-g53").checked
+  };
+}
+
+/* ---------- campos comuns ---------- */
+const F_TROCA = [
+  {k:"t",  l:"T (ferramenta)", d:1, s:1},
+  {k:"td", l:"Ø fresa/broca",  d:10, s:0.5, u:"mm"},
+  {k:"ts", l:"S (rotação)",    d:3000, s:100, u:"rpm"},
+  {k:"th", l:"H (comp.)",      d:1, s:1},
+  {k:"tdd",l:"D (raio)",       d:1, s:1},
+];
+
+/* ============================================================
+   DEFINIÇÃO DOS BLOCOS
+   Cada bloco: nome, cor, params, warn(), gerar(), volume()
+   Variáveis-macro reutilizadas entre blocos (execução sequencial):
+   #1 passo Z · #2 Z atual · #4 prof · #5/#6 meias-medidas úteis
+   #12 passe lateral · #13 direção · #15 contador/offset
+   #23/#24 centro X/Y · #26 Z segurança (global) · #30/#31 posição furo
+   Rótulos N exclusivos por bloco: N{(i+1)*100 + 10,20,30...}
+   ============================================================ */
+const DEFS = {
+
+  /* ---------------- FACEAMENTO ---------------- */
+  face:{
+    nome:"Faceamento", sub:"zigue-zague XY", cor:"var(--amber)", hex:0xffb02e,
+    params:[
+      {k:"sobre",l:"Sobremetal total",d:1,s:0.1,u:"mm"},
+      {k:"ap",l:"Passo Z (ap)",d:0.5,s:0.1,u:"mm"},
+      {k:"ae",l:"Passe lateral (ae)",d:7,s:0.5,u:"mm"},
+      {k:"cx2",l:"Área X",d:220,s:5,u:"mm"},
+      {k:"cy2",l:"Área Y",d:150,s:5,u:"mm"},
+      {k:"f",l:"Avanço F",d:800,s:50,u:"mm/min"},
+      {k:"est",l:"Estratégia",sel:[
+        {v:"zig",t:"Zigue-zague (vai-e-vem)"},
+        {v:"uma",t:"Uma direção só (concordante, retorna por cima)"},
+      ],d:"zig"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(p.ae>d*0.95) w.push("Passe lateral maior que 95% do Ø da fresa: pode sobrar crista.");
+      if(p.cx2<c.bx||p.cy2<c.by) w.push("Área de faceamento menor que o bloco de material.");
+      return w; },
+    gerar(p,c,nb,d){
+      const L=[];
+      L.push(`#1=${fnum(p.ap)}(PASSO Z)`);
+      L.push(`#2=0(Z ATUAL)`);
+      L.push(`#4=${fnum(p.sobre)}(SOBREMETAL TOTAL)`);
+      L.push(`#6=${fnum(p.cy2/2)}(MEIO Y)`);
+      L.push(`#16=0-#6(Y FINAL)`);
+      L.push(`#7=${fnum(p.cx2/2+d)}(X DE APROXIMACAO - FORA DA PECA)`);
+      L.push(`#12=${fnum(p.ae)}(PASSE LATERAL)`);
+      if(p.est==="uma"){
+        L.push(`N${nb+10}#2=#2+#1`);
+        L.push(`IF[#2GT#4]THEN#2=#4`);
+        L.push(`#15=#6(Y ATUAL)`);
+        L.push(`N${nb+20}G0Z2.`);
+        L.push(`G0X-[#7]Y[#15]`);
+        L.push(`G0Z[0.5-#2]`);
+        L.push(`G1Z-[#2]F${fnum(p.f/2)}`);
+        L.push(`G1X[#7]F${fnum(p.f)}`);
+        L.push(`#15=#15-#12`);
+        L.push(`IF[#15GE#16]GOTO${nb+20}`);
+        L.push(`G0Z2.`);
+        L.push(`IF[#2LT#4]GOTO${nb+10}`);
+        return L;
+      }
+      L.push(`N${nb+10}#2=#2+#1`);
+      L.push(`IF[#2GT#4]THEN#2=#4`);
+      L.push(`G0Z2.`);
+      L.push(`G0X-[#7]Y[#6]`);
+      L.push(`G0Z[0.5-#2]`);
+      L.push(`G1Z-[#2]F${fnum(p.f/2)}`);
+      L.push(`#15=#6(Y ATUAL)`);
+      L.push(`#13=1(DIRECAO)`);
+      L.push(`N${nb+20}G1X[#7*#13]F${fnum(p.f)}`);
+      L.push(`#13=0-#13`);
+      L.push(`#15=#15-#12`);
+      L.push(`IF[#15LT#16]GOTO${nb+30}`);
+      L.push(`G1Y[#15]`);
+      L.push(`GOTO${nb+20}`);
+      L.push(`N${nb+30}G0Z2.`);
+      L.push(`IF[#2LT#4]GOTO${nb+10}`);
+      return L;
+    },
+    volume(p,c){
+      const g=new THREE.BoxGeometry(Math.min(p.cx2,c.bx*1.4), p.sobre, Math.min(p.cy2,c.by*1.4));
+      const m=new THREE.Mesh(g); m.position.set(0,-p.sobre/2,0); return m;
+    }
+  },
+
+  /* ---------------- BOLSA RETANGULAR ---------------- */
+  bolsaRet:{
+    nome:"Bolsa retangular", sub:"zigue-zague + contorno", cor:"var(--green)", hex:0x3ecf8e,
+    params:[
+      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
+      {k:"lx",l:"Comprimento X",d:60,s:1,u:"mm"},{k:"ly",l:"Largura Y",d:40,s:1,u:"mm"},
+      {k:"prof",l:"Profundidade",d:10,s:0.5,u:"mm"},
+      {k:"ap",l:"Passo Z (ap)",d:1,s:0.1,u:"mm"},
+      {k:"ae",l:"Passe lateral (ae)",d:6,s:0.5,u:"mm"},
+      {k:"f",l:"Avanço F",d:500,s:50,u:"mm/min"},
+      {k:"fz",l:"F de mergulho",d:150,s:10,u:"mm/min"},
+      {k:"est",l:"Estratégia",sel:[
+        {v:"zig",t:"Zigue-zague + contorno final"},
+        {v:"cont",t:"Contorno concêntrico (de dentro para fora)"},
+      ],d:"zig"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(p.lx<=d||p.ly<=d) w.push("Bolsa menor ou igual ao Ø da fresa: não há área útil.");
+      if(p.prof>c.bz) w.push("Profundidade maior que a altura do bloco.");
+      return w; },
+    gerar(p,c,nb,d){
+      const rf=d/2, L=[];
+      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
+      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
+      L.push(`#5=${fnum(Math.max(0.1,p.lx/2-rf))}(MEIO X UTIL - RAIO DA FRESA DESCONTADO)`);
+      L.push(`#6=${fnum(Math.max(0.1,p.ly/2-rf))}(MEIO Y UTIL)`);
+      L.push(`#16=0-#6(Y FINAL)`);
+      L.push(`#1=${fnum(p.ap)}(PASSO Z)`);
+      L.push(`#2=0(Z ATUAL)`);
+      L.push(`#4=${fnum(p.prof)}(PROFUNDIDADE)`);
+      L.push(`#12=${fnum(p.ae)}(PASSE LATERAL)`);
+      if(p.est==="cont"){
+        L.push(`N${nb+10}#2=#2+#1`);
+        L.push(`IF[#2GT#4]THEN#2=#4`);
+        L.push(`G0Z2.`);
+        L.push(`G0X[#23]Y[#24]`);
+        L.push(`G1Z-[#2]F${fnum(p.fz)}(MERGULHO NO CENTRO)`);
+        L.push(`#15=0(OFFSET DO CONTORNO)`);
+        L.push(`N${nb+20}#15=#15+#12`);
+        L.push(`#18=#15(MEIO X DESTE CONTORNO)`);
+        L.push(`IF[#18GT#5]THEN#18=#5`);
+        L.push(`#19=#15(MEIO Y DESTE CONTORNO)`);
+        L.push(`IF[#19GT#6]THEN#19=#6`);
+        L.push(`G1X[#23-#18]Y[#24+#19]F${fnum(p.f)}`);
+        L.push(`G1X[#23+#18]`);
+        L.push(`G1Y[#24-#19]`);
+        L.push(`G1X[#23-#18]`);
+        L.push(`G1Y[#24+#19]`);
+        L.push(`G1X[#23+#18](FECHA O CONTORNO)`);
+        L.push(`IF[#15LT#5]GOTO${nb+20}`);
+        L.push(`IF[#15LT#6]GOTO${nb+20}`);
+        L.push(`G0Z2.`);
+        L.push(`IF[#2LT#4]GOTO${nb+10}`);
+        return L;
+      }
+      L.push(`N${nb+10}#2=#2+#1`);
+      L.push(`IF[#2GT#4]THEN#2=#4`);
+      L.push(`G0Z2.`);
+      L.push(`G0X[#23-#5]Y[#24+#6]`);
+      L.push(`G1Z-[#2]F${fnum(p.fz)}(MERGULHO)`);
+      L.push(`#15=#6(Y ATUAL)`);
+      L.push(`#13=1(DIRECAO)`);
+      L.push(`N${nb+20}G1X[#23+[#5*#13]]F${fnum(p.f)}`);
+      L.push(`#13=0-#13`);
+      L.push(`#15=#15-#12`);
+      L.push(`IF[#15LT#16]GOTO${nb+30}`);
+      L.push(`G1Y[#24+#15]`);
+      L.push(`GOTO${nb+20}`);
+      L.push(`N${nb+30}(CONTORNO FINAL)`);
+      L.push(`G1Y[#24-#6]`);
+      L.push(`G1X[#23-#5]`);
+      L.push(`G1Y[#24+#6]`);
+      L.push(`G1X[#23+#5]`);
+      L.push(`G1Y[#24-#6]`);
+      L.push(`G0Z2.`);
+      L.push(`IF[#2LT#4]GOTO${nb+10}`);
+      return L;
+    },
+    volume(p){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(p.lx,p.prof,p.ly));
+      m.position.set(p.cx,-p.prof/2,-p.cy); return m;
+    }
+  },
+
+  /* ---------------- BOLSA CIRCULAR ---------------- */
+  bolsaCirc:{
+    nome:"Bolsa circular", sub:"espiral por círculos", cor:"var(--green)", hex:0x2fb377,
+    params:[
+      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
+      {k:"dia",l:"Ø da bolsa",d:50,s:1,u:"mm"},
+      {k:"prof",l:"Profundidade",d:10,s:0.5,u:"mm"},
+      {k:"ap",l:"Passo Z (ap)",d:1,s:0.1,u:"mm"},
+      {k:"pr",l:"Passe radial",d:5,s:0.5,u:"mm"},
+      {k:"f",l:"Avanço F",d:500,s:50,u:"mm/min"},
+      {k:"fz",l:"F de mergulho",d:150,s:10,u:"mm/min"},
+      {k:"est",l:"Estratégia",sel:[
+        {v:"esp",t:"Espiral por círculos (desbaste completo)"},
+        {v:"par",t:"Só a parede (1 círculo por nível — acabamento)"},
+      ],d:"esp"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(p.dia<=d) w.push("Ø da bolsa menor ou igual ao Ø da fresa.");
+      if(p.prof>c.bz) w.push("Profundidade maior que a altura do bloco.");
+      return w; },
+    gerar(p,c,nb,d){
+      const rf=d/2, L=[];
+      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
+      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
+      L.push(`#5=${fnum(Math.max(0.1,p.dia/2-rf))}(RAIO UTIL)`);
+      L.push(`#1=${fnum(p.ap)}(PASSO Z)`);
+      L.push(`#2=0(Z ATUAL)`);
+      L.push(`#4=${fnum(p.prof)}(PROFUNDIDADE)`);
+      if(p.est==="par"){
+        L.push(`G0Z2.`);
+        L.push(`G0X[#23]Y[#24]`);
+        L.push(`N${nb+10}#2=#2+#1`);
+        L.push(`IF[#2GT#4]THEN#2=#4`);
+        L.push(`G1Z-[#2]F${fnum(p.fz)}(MERGULHO NO CENTRO)`);
+        L.push(`G1X[#23+#5]F${fnum(p.f)}`);
+        L.push(`G3I-[#5]`);
+        L.push(`G1X[#23]`);
+        L.push(`IF[#2LT#4]GOTO${nb+10}`);
+        L.push(`G0Z2.`);
+        return L;
+      }
+      L.push(`#12=${fnum(p.pr)}(PASSE RADIAL)`);
+      L.push(`N${nb+10}#2=#2+#1`);
+      L.push(`IF[#2GT#4]THEN#2=#4`);
+      L.push(`G0Z2.`);
+      L.push(`G0X[#23]Y[#24]`);
+      L.push(`G1Z-[#2]F${fnum(p.fz)}(MERGULHO NO CENTRO)`);
+      L.push(`#15=0(RAIO ATUAL)`);
+      L.push(`N${nb+20}#15=#15+#12`);
+      L.push(`IF[#15GT#5]THEN#15=#5`);
+      L.push(`G1X[#23+#15]F${fnum(p.f)}`);
+      L.push(`G3I-[#15]`);
+      L.push(`IF[#15LT#5]GOTO${nb+20}`);
+      L.push(`G1X[#23]Y[#24]`);
+      L.push(`G0Z2.`);
+      L.push(`IF[#2LT#4]GOTO${nb+10}`);
+      return L;
+    },
+    volume(p){
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(p.dia/2,p.dia/2,p.prof,48));
+      m.position.set(p.cx,-p.prof/2,-p.cy); return m;
+    }
+  },
+
+  /* ---------------- ESCARIADO ANGULAR (estrategia do Chanfro_Conico.NC) ---------------- */
+  escariado:{
+    nome:"Escariado angular", sub:"círculo por nível · G41", cor:"var(--green)", hex:0x6fe0ac,
+    params:[
+      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
+      {k:"raio",l:"Raio no topo (#5)",d:15,s:0.5,u:"mm"},
+      {k:"ang",l:"Ângulo c/ eixo Z (#7)",d:66.8,s:0.1,u:"°"},
+      {k:"prof",l:"Profundidade (#4)",d:6,s:0.1,u:"mm"},
+      {k:"ap",l:"Incremento Z (#1)",d:0.1,s:0.05,u:"mm"},
+      {k:"f",l:"Avanço F",d:1600,s:50,u:"mm/min"},
+      {k:"comp",l:"Compensação de raio",sel:[
+        {v:"g41",t:"Com G41/G40 (raio da peça no programa)"},
+        {v:"sem",t:"Sem compensação (desconta o raio da fresa)"},
+      ],d:"g41"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(p.ang<=0||p.ang>=90) w.push("Ângulo deve ficar entre 0° e 90° (medido a partir do eixo Z, como no Chanfro Cônico).");
+      const queda=p.prof*Math.tan(p.ang*Math.PI/180);
+      const rBase = p.comp==="sem" ? p.raio-d/2 : p.raio;
+      if(rBase-queda<=0) w.push("O raio zera antes da profundidade final: reduza o ângulo, a profundidade ou aumente o raio.");
+      if(p.comp==="g41" && p.raio<=d/2) w.push("Raio no topo menor que o raio da fresa: G41 vai alarmar.");
+      if(p.prof>c.bz) w.push("Profundidade maior que a altura do bloco.");
+      return w; },
+    gerar(p,c,nb,d){
+      const rf=d/2, L=[];
+      const comG41 = p.comp!=="sem";
+      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
+      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
+      L.push(`#7=${fnum(p.ang)}(ANGULO COM O EIXO Z)`);
+      L.push(`#5=${fnum(comG41?p.raio:Math.max(0.1,p.raio-rf))}(RAIO NO TOPO${comG41?"":" - RAIO DA FRESA DESCONTADO"})`);
+      L.push(`#4=${fnum(p.prof)}(PROFUNDIDADE)`);
+      L.push(`#1=${fnum(p.ap)}(INCREMENTO)`);
+      L.push(`#2=0(Z ATUAL)`);
+      L.push(`G0X[#23]Y[#24]`);
+      L.push(`G0Z2.`);
+      L.push(`N${nb+10}#2=#2+#1`);
+      L.push(`#3=#2*TAN[#7]`);
+      L.push(`#6=#5-#3(RAIO NESTE NIVEL)`);
+      L.push(`IF[#2GT#4]GOTO${nb+20}`);
+      L.push(`G1Z-[#2]F${fnum(p.f)}`);
+      L.push(comG41 ? `G1G41X[#23+#6]` : `G1X[#23+#6]`);
+      L.push(`G3I-[#6]`);
+      L.push(comG41 ? `G1G40X[#23]` : `G1X[#23]`);
+      L.push(`GOTO${nb+10}`);
+      L.push(`N${nb+20}G0Z2.`);
+      return L;
+    },
+    volume(p,c,d){
+      const rb=Math.max(0.3, p.raio - p.prof*Math.tan(p.ang*Math.PI/180));
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(p.raio,rb,p.prof,48));
+      m.position.set(p.cx,-p.prof/2,-p.cy); return m;
+    }
+  },
+
+  /* ---------------- BOLSA CÔNICA (macro Bolsa_Final) ---------------- */
+  bolsaCon:{
+    nome:"Bolsa cônica", sub:"rampa em X · macro Bolsa_Final", cor:"var(--green)", hex:0x3fe0b0,
+    params:[
+      {k:"x8",l:"X fora da peça (#8)",d:85,s:1,u:"mm"},
+      {k:"y9",l:"Meio comprimento Y (#9)",d:61,s:1,u:"mm"},
+      {k:"r5",l:"Raio do Ø interno (#5)",d:100,s:1,u:"mm"},
+      {k:"ang",l:"Ângulo da bolsa (#7)",d:16,s:0.5,u:"°"},
+      {k:"prof",l:"Z final (#4)",d:28,s:0.5,u:"mm"},
+      {k:"ap",l:"Incremento (#1)",d:0.25,s:0.05,u:"mm"},
+      {k:"f",l:"Avanço F",d:2000,s:50,u:"mm/min"},
+      {k:"esp",l:"Espelhar para a bolsa oposta (G51.1 X0)",chk:true,d:false},
+    ],
+    warn(p,c,d){ const w=[];
+      const queda=p.prof*Math.tan(p.ang*Math.PI/180);
+      if(p.r5-queda<=0) w.push("X da parede zera antes do Z final: reduza o ângulo ou o Z final.");
+      if(p.x8 >= p.r5-queda-d/2) w.push("X de recuo (#8) invade a parede na profundidade final — deixe folga de raio da ferramenta + segurança (o macro original usa ~20 mm).");
+      w.push("Atenção — zero desta operação segue o macro Bolsa_Final: X centro, Y centro, Z na JUNÇÃO (zerar o X pelo X final na profundidade final da bolsa).");
+      return w; },
+    gerar(p,c,nb,d){
+      const L=[];
+      L.push(`(ZERO: X CENTRO / Y CENTRO / Z NA JUNCAO)`);
+      L.push(`(ZERAR O X COM O VALOR DO X FINAL NA PROFUNDIDADE FINAL DA BOLSA)`);
+      if(p.esp) L.push(`G51.1X0.(ESPELHAMENTO PARA BOLSA OPOSTA)`);
+      L.push(`#8=${fnum(p.x8)}(X DE POSICIONAMENTO FORA DA PECA)`);
+      L.push(`#9=${fnum(p.y9)}(METADE DO COMPRIMENTO DA BOLSA)`);
+      L.push(`G0X[#8]Y[#9](POSICIONAMENTO INICIAL)`);
+      L.push(`#1=${fnum(p.ap)}(INCREMENTO)`);
+      L.push(`#2=0(Z INICIAL)`);
+      L.push(`#7=${fnum(p.ang)}(ANGULO DA BOLSA)`);
+      L.push(`#4=${fnum(p.prof)}(Z FINAL)`);
+      L.push(`#5=${fnum(p.r5)}(RAIO DO DIAMETRO INTERNO)`);
+      L.push(`N${nb+10}#2=#1+#2(Z + INCREMENTO)`);
+      L.push(`#3=#2*TAN[#7](INCREMENTO DA RAMPA ATE O X FINAL)`);
+      L.push(`#6=#5-#3(X INICIAL = RAIO - #3)`);
+      L.push(`IF[#2GT#4]GOTO${nb+20}(LOOPING ATE O Z FINAL)`);
+      L.push(`G0Z-[#2]`);
+      L.push(`G1X[#6]F${fnum(p.f)}`);
+      L.push(`G1Y-[#9]`);
+      L.push(`G1X[#8]`);
+      L.push(`#2=#1+#2`);
+      L.push(`#3=#2*TAN[#7]`);
+      L.push(`#6=#5-#3`);
+      L.push(`IF[#2GT#4]GOTO${nb+20}(LOOPING ATE O Z FINAL)`);
+      L.push(`G0Z-[#2]`);
+      L.push(`G1X[#6]F${fnum(p.f)}`);
+      L.push(`G1Y[#9]`);
+      L.push(`G1X[#8]`);
+      L.push(`GOTO${nb+10}`);
+      L.push(`N${nb+20}G0Z2.`);
+      if(p.esp) L.push(`G50.1(CANCELA ESPELHAMENTO)`);
+      return L;
+    },
+    volume(p,c,d){
+      const queda=p.prof*Math.tan(p.ang*Math.PI/180);
+      const xParedeFundo=Math.max(0.5, p.r5-queda);
+      function cunha(sinal){
+        const sh=new THREE.Shape();
+        sh.moveTo(sinal*p.x8, 0);
+        sh.lineTo(sinal*p.r5, 0);
+        sh.lineTo(sinal*xParedeFundo, -p.prof);
+        sh.lineTo(sinal*p.x8, -p.prof);
+        sh.closePath();
+        const g=new THREE.ExtrudeGeometry(sh,{depth:2*p.y9,bevelEnabled:false});
+        g.translate(0,0,-p.y9);
+        return new THREE.Mesh(g);
+      }
+      if(!p.esp) return cunha(1);
+      const grp=new THREE.Group();
+      grp.add(cunha(1)); grp.add(cunha(-1));
+      return grp;
+    }
+  },
+
+  /* ---------------- CANAL RETO ---------------- */
+  canal:{
+    nome:"Canal reto", sub:"desbaste + acabamento", cor:"var(--cyan)", hex:0x4dd0e1,
+    params:[
+      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
+      {k:"comp",l:"Comprimento",d:100,s:1,u:"mm"},
+      {k:"larg",l:"Largura final",d:16,s:0.5,u:"mm"},
+      {k:"prof",l:"Profundidade",d:8,s:0.5,u:"mm"},
+      {k:"ori",l:"Direção do canal",sel:[
+        {v:"x",t:"Ao longo de X"},
+        {v:"y",t:"Ao longo de Y"},
+      ],d:"x"},
+      {k:"est",l:"Estratégia de desbaste",sel:[
+        {v:"lat",t:"Incremento no Z + passes laterais"},
+        {v:"soz",t:"Incremento só no Z (vai-e-vem no centro)"},
+      ],d:"lat"},
+      {k:"ap",l:"AP desbaste",d:0.25,s:0.05,u:"mm"},
+      {k:"f",l:"F desbaste",d:2000,s:50,u:"mm/min"},
+      {k:"sobre",l:"Sobremetal lateral",d:0.5,s:0.1,u:"mm"},
+      {k:"acab",l:"Fazer acabamento (passe nas paredes)",chk:true,d:true},
+      {k:"apA",l:"AP acabamento",d:8,s:0.5,u:"mm"},
+      {k:"fA",l:"F acabamento",d:800,s:50,u:"mm/min"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(d>p.larg){ w.push(`ERRO: Ø da fresa (${fnum(d)}) maior que a largura do canal (${fnum(p.larg)}) — bloco não gerado.`); return w; }
+      const offA=(p.larg-d)/2;
+      if(offA>0.005) w.push(`Folga da ferramenta: ${fnum(offA)} mm para cada lado (canal ${fnum(p.larg)} · fresa Ø${fnum(d)}).`);
+      if(p.est==="soz" && offA>0.005 && !p.acab) w.push("Estratégia só no Z deixa a largura da fresa: ligue o acabamento ou use passes laterais para chegar na largura final.");
+      if(p.acab && p.larg-2*p.sobre<d) w.push("Sobremetal lateral maior que a folga: o desbaste sairá na linha de centro e o acabamento remove o resto.");
+      if(p.prof>c.bz) w.push("Profundidade maior que a altura do bloco.");
+      return w; },
+    gerar(p,c,nb,d){
+      if(d>p.larg) return [`(ERRO: FERRAMENTA O${fnum(d)} MAIOR QUE A LARGURA ${fnum(p.larg)} - BLOCO NAO GERADO)`];
+      const L=[];
+      const A = p.ori==="x" ? "X" : "Y";
+      const B = p.ori==="x" ? "Y" : "X";
+      const aC = p.ori==="x" ? "#23" : "#24";
+      const bC = p.ori==="x" ? "#24" : "#23";
+      const offD = Math.max(0, (p.larg - 2*p.sobre - d)/2);
+      const offA = (p.larg - d)/2;
+      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
+      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
+      L.push(`#8=${fnum(p.comp/2)}(MEIO COMPRIMENTO)`);
+      L.push(`#4=${fnum(p.prof)}(PROFUNDIDADE)`);
+      const lateral = p.est==="lat" && offD>0.005;
+      L.push(`(DESBASTE${lateral?` - ${fnum(offD)} PARA CADA LADO`:" - SO INCREMENTO NO Z"})`);
+      if(lateral){
+        L.push(`G0${A}[${aC}+#8]${B}[${bC}+${fnum(offD)}]`);
+        L.push(`G0Z2.`);
+        L.push(`#1=0(Z ATUAL)`);
+        L.push(`N${nb+10}IF[#1GT#4]GOTO${nb+20}`);
+        L.push(`G0Z-[#1]`);
+        L.push(`G1${A}[${aC}-#8]F${fnum(p.f)}`);
+        L.push(`G1${B}[${bC}-${fnum(offD)}]`);
+        L.push(`G1${A}[${aC}+#8]`);
+        L.push(`G0${B}[${bC}+${fnum(offD)}]`);
+        L.push(`#1=#1+${fnum(p.ap)}`);
+        L.push(`GOTO${nb+10}`);
+      } else {
+        L.push(`G0${A}[${aC}+#8]${B}[${bC}]`);
+        L.push(`G0Z2.`);
+        L.push(`#1=0(Z ATUAL)`);
+        L.push(`N${nb+10}IF[#1GT#4]GOTO${nb+20}`);
+        L.push(`G0Z-[#1]`);
+        L.push(`G1${A}[${aC}-#8]F${fnum(p.f)}`);
+        L.push(`#1=#1+${fnum(p.ap)}`);
+        L.push(`IF[#1GT#4]GOTO${nb+20}`);
+        L.push(`G0Z-[#1]`);
+        L.push(`G1${A}[${aC}+#8]`);
+        L.push(`#1=#1+${fnum(p.ap)}`);
+        L.push(`GOTO${nb+10}`);
+      }
+      L.push(`N${nb+20}G0Z2.`);
+      if(p.acab){
+        L.push(`(ACABAMENTO - ${fnum(offA)} PARA CADA LADO)`);
+        L.push(`G0${A}[${aC}+#8]${B}[${bC}+${fnum(offA)}]`);
+        L.push(`#1=0(Z ATUAL)`);
+        L.push(`N${nb+30}#1=#1+${fnum(p.apA)}`);
+        L.push(`IF[#1GT#4]THEN#1=#4`);
+        L.push(`G0Z-[#1]`);
+        L.push(`G1${A}[${aC}-#8]F${fnum(p.fA)}`);
+        L.push(`G1${B}[${bC}-${fnum(offA)}]`);
+        L.push(`G1${A}[${aC}+#8]`);
+        L.push(`G0${B}[${bC}+${fnum(offA)}]`);
+        L.push(`IF[#1LT#4]GOTO${nb+30}`);
+        L.push(`G0Z2.`);
+      }
+      return L;
+    },
+    volume(p,c,d){
+      const larg=Math.max(p.larg,d);
+      const gx = p.ori==="x" ? p.comp : larg;
+      const gy = p.ori==="x" ? larg : p.comp;
+      const m=new THREE.Mesh(new THREE.BoxGeometry(gx,p.prof,gy));
+      m.position.set(p.cx,-p.prof/2,-p.cy); return m;
+    }
+  },
+  canalR:{
+    nome:"Canal fundo raiado", sub:"raio R no fundo (Y)", cor:"var(--cyan)", hex:0x2fa6b5,
+    params:[
+      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
+      {k:"comp",l:"Comprimento (Y)",d:110,s:1,u:"mm"},
+      {k:"larg",l:"Largura (X)",d:20,s:0.5,u:"mm"},
+      {k:"prof",l:"Prof. no centro",d:12,s:0.5,u:"mm"},
+      {k:"raio",l:"Raio do fundo",d:115,s:1,u:"mm"},
+      {k:"profp",l:"Prof. nas pontas",d:6,s:0.5,u:"mm"},
+      {k:"ap",l:"AP desbaste",d:0.5,s:0.1,u:"mm"},
+      {k:"ae",l:"Passe lateral (ae)",d:4,s:0.5,u:"mm"},
+      {k:"f",l:"F desbaste",d:400,s:50,u:"mm/min"},
+      {k:"sobre",l:"Sobremetal lateral",d:0.5,s:0.1,u:"mm"},
+      {k:"acab",l:"Fazer acabamento (AP independente no raio)",chk:true,d:true},
+      {k:"apAR",l:"AP acab. parte reta",d:8,s:0.5,u:"mm"},
+      {k:"apAF",l:"AP acab. do raio",d:0.2,s:0.05,u:"mm"},
+      {k:"fA",l:"F acabamento",d:300,s:50,u:"mm/min"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(d>p.larg){ w.push(`ERRO: Ø da fresa (${fnum(d)}) maior que a largura do canal (${fnum(p.larg)}) — bloco não gerado.`); return w; }
+      const offA=(p.larg-d)/2;
+      if(offA>0.005) w.push(`Folga da ferramenta: ${fnum(offA)} mm para cada lado (canal ${fnum(p.larg)} · fresa Ø${fnum(d)}).`);
+      if(p.profp>=p.prof) w.push("Prof. nas pontas deve ser MENOR que a prof. no centro.");
+      if(p.raio<p.prof-p.profp) w.push("Raio do fundo menor que a queda (prof − prof. pontas): geometria impossível.");
+      const yArc=Math.sqrt(Math.max(0,p.raio*p.raio-Math.pow(p.raio-(p.prof-p.profp),2)));
+      if(yArc>p.comp/2) w.push("O arco do fundo é mais comprido que o canal: aumente o comprimento ou o raio.");
+      return w; },
+    gerar(p,c,nb,d){
+      if(d>p.larg) return [`(ERRO: FERRAMENTA O${fnum(d)} MAIOR QUE A LARGURA ${fnum(p.larg)} - BLOCO NAO GERADO)`];
+      const rf=d/2, L=[];
+      const largD=Math.max(d, p.larg-2*p.sobre);
+      L.push(`(DESBASTE - SOBREMETAL LATERAL ${fnum(p.sobre)})`);
+      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
+      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
+      L.push(`#7=${fnum(p.raio)}(RAIO DO FUNDO)`);
+      L.push(`#8=${fnum(Math.max(0.1,p.comp/2-rf))}(MEIO COMPRIMENTO UTIL)`);
+      L.push(`#5=${fnum(Math.max(0,largD/2-rf))}(MEIA LARGURA UTIL DO DESBASTE)`);
+      L.push(`#11=${fnum(p.profp)}(PROF DO FUNDO RETO NAS PONTAS - ONDE COMECA O RAIO)`);
+      L.push(`#1=${fnum(p.ap)}(PASSO Z)`);
+      L.push(`#2=0(Z ATUAL)`);
+      L.push(`#4=${fnum(p.prof)}(PROF NO CENTRO)`);
+      L.push(`#12=${fnum(p.ae)}(PASSE LATERAL)`);
+      L.push(`#10=${fnum(p.f)}(AVANCO)`);
+      L.push(`#13=1(DIRECAO)`);
+      L.push(`G0X[#23]Y[#24+#8]`);
+      L.push(`G0Z2.`);
+      L.push(`N${nb+10}#2=#2+#1`);
+      L.push(`IF[#2GE#4]THEN#2=#4`);
+      L.push(`#3=#4-#2(QUANTO FALTA)`);
+      L.push(`#17=#7-#3`);
+      L.push(`IF[#2LE#11]THEN#9=#8`);
+      L.push(`IF[#2GT#11]THEN#9=SQRT[[#7*#7]-[#17*#17]](MEIO COMPRIMENTO NESTE NIVEL)`);
+      L.push(`G1X[#23]Y[#24-[#9*#13]]Z-[#2]F[#10](MERGULHO EM RAMPA AO LONGO DO Y)`);
+      L.push(`#15=0(OFFSET X)`);
+      L.push(`N${nb+20}#15=#15+#12`);
+      L.push(`IF[#15GE#5]THEN#15=#5`);
+      L.push(`G1X[#23+#15]`);
+      L.push(`G1Y[#24+[#9*#13]]`);
+      L.push(`G1X[#23-#15]`);
+      L.push(`G1Y[#24-[#9*#13]]`);
+      L.push(`IF[#15LT#5]GOTO${nb+20}`);
+      L.push(`G1X[#23]`);
+      L.push(`#13=0-#13`);
+      L.push(`IF[#2LT#4]GOTO${nb+10}`);
+      L.push(`G0Z2.`);
+      if(p.acab){
+        const offA=(p.larg-d)/2;
+        L.push(`(ACABAMENTO - AP ${fnum(p.apAR)} NA RETA / AP ${fnum(p.apAF)} NO RAIO)`);
+        L.push(`(A PROF DAS PONTAS #11 SEPARA OS DOIS AP)`);
+        L.push(`#19=${fnum(offA)}(OFFSET DO ACABAMENTO)`);
+        L.push(`#2=0(Z ATUAL)`);
+        L.push(`G0X[#23]Y[#24+#8]`);
+        L.push(`G0Z2.`);
+        L.push(`N${nb+40}IF[#2LT#11]THEN#1=${fnum(p.apAR)}(AP DA PARTE RETA)`);
+        L.push(`IF[#2GE#11]THEN#1=${fnum(p.apAF)}(AP DO RAIO)`);
+        L.push(`#2=#2+#1`);
+        L.push(`IF[#2GT#4]THEN#2=#4`);
+        L.push(`#3=#4-#2`);
+        L.push(`#17=#7-#3`);
+        L.push(`IF[#2LE#11]THEN#9=#8`);
+        L.push(`IF[#2GT#11]THEN#9=SQRT[[#7*#7]-[#17*#17]]`);
+        L.push(`G0X[#23]Y[#24+#9]`);
+        L.push(`G1Z-[#2]F${fnum(p.fA)}`);
+        L.push(`G1X[#23+#19]`);
+        L.push(`G1Y[#24-#9]`);
+        L.push(`G1X[#23-#19]`);
+        L.push(`G1Y[#24+#9]`);
+        L.push(`G1X[#23]`);
+        L.push(`IF[#2LT#4]GOTO${nb+40}`);
+        L.push(`G0Z2.`);
+      }
+      return L;
+    },
+    volume(p,c,d){
+      const P=p.prof, R=Math.max(p.raio, P-p.profp+0.01), profP=Math.min(p.profp,P-0.01);
+      const yh=p.comp/2;
+      let yArc=Math.sqrt(Math.max(0,R*R-Math.pow(R-(P-profP),2)));
+      yArc=Math.min(yArc,yh-0.001);
+      const sh=new THREE.Shape();
+      sh.moveTo(-yh,0);
+      sh.lineTo(-yh,-profP);
+      const N=36;
+      for(let i=0;i<=N;i++){
+        const y=-yArc+ (2*yArc)*(i/N);
+        const z=-(P-(R-Math.sqrt(Math.max(0,R*R-y*y))));
+        sh.lineTo(y, Math.max(z,-P));
+      }
+      sh.lineTo(yh,-profP);
+      sh.lineTo(yh,0);
+      sh.closePath();
+      const larg=Math.max(p.larg,d);
+      const g=new THREE.ExtrudeGeometry(sh,{depth:larg,bevelEnabled:false});
+      g.rotateY(Math.PI/2);
+      g.translate(p.cx-larg/2,0,-p.cy);
+      return new THREE.Mesh(g);
+    }
+  },
+
+  /* ---------------- FURAÇÃO EM LINHA ---------------- */
+  furosL:{
+    nome:"Furos em linha", sub:"ciclo G83 / G81", cor:"var(--violet)", hex:0xb388ff,
+    params:[
+      {k:"x0",l:"X do 1º furo",d:-60,s:1,u:"mm"},{k:"y0",l:"Y do 1º furo",d:-50,s:1,u:"mm"},
+      {k:"ix",l:"Incremento X",d:30,s:1,u:"mm"},{k:"iy",l:"Incremento Y",d:0,s:1,u:"mm"},
+      {k:"n",l:"Qtd de furos",d:5,s:1},
+      {k:"dia",l:"Ø da broca",d:8,s:0.5,u:"mm"},
+      {k:"prof",l:"Profundidade",d:20,s:0.5,u:"mm"},
+      {k:"q",l:"Peck Q (0 = G81)",d:5,s:0.5,u:"mm"},
+      {k:"f",l:"Avanço F",d:120,s:10,u:"mm/min"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(p.n<1) w.push("Quantidade de furos deve ser 1 ou mais.");
+      if(p.prof>c.bz) w.push("Furo mais profundo que a altura do bloco (furo passante).");
+      return w; },
+    gerar(p,c,nb,d){
+      const ciclo = p.q>0 ? `G83` : `G81`;
+      const qtxt  = p.q>0 ? `Q${fx(p.q)}` : ``;
+      const L=[];
+      L.push(`#25=${fnum(Math.max(1,Math.round(p.n)))}(QTD DE FUROS)`);
+      L.push(`#15=0(CONTADOR)`);
+      L.push(`N${nb+10}#30=${fnum(p.x0)}+[#15*[${fnum(p.ix)}]](X DO FURO)`);
+      L.push(`#31=${fnum(p.y0)}+[#15*[${fnum(p.iy)}]](Y DO FURO)`);
+      L.push(`G0X[#30]Y[#31]`);
+      L.push(`G98${ciclo}X[#30]Y[#31]Z-${fx(p.prof)}R2.${qtxt}F${fnum(p.f)}`);
+      L.push(`G80`);
+      L.push(`#15=#15+1`);
+      L.push(`IF[#15LT#25]GOTO${nb+10}`);
+      return L;
+    },
+    volume(p){
+      const grp=new THREE.Group();
+      const n=Math.max(1,Math.round(p.n));
+      for(let i=0;i<n;i++){
+        const m=new THREE.Mesh(new THREE.CylinderGeometry(p.dia/2,p.dia/2,p.prof,24));
+        m.position.set(p.x0+i*p.ix, -p.prof/2, -(p.y0+i*p.iy));
+        grp.add(m);
+      }
+      return grp;
+    }
+  },
+
+  /* ---------------- FURAÇÃO EM CÍRCULO ---------------- */
+  furosC:{
+    nome:"Furos em círculo", sub:"círculo de furos", cor:"var(--violet)", hex:0x8f6ae0,
+    params:[
+      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
+      {k:"dc",l:"Ø do círculo",d:80,s:1,u:"mm"},
+      {k:"n",l:"Qtd de furos",d:6,s:1},
+      {k:"a0",l:"Ângulo inicial",d:0,s:5,u:"°"},
+      {k:"dia",l:"Ø da broca",d:8,s:0.5,u:"mm"},
+      {k:"prof",l:"Profundidade",d:20,s:0.5,u:"mm"},
+      {k:"q",l:"Peck Q (0 = G81)",d:5,s:0.5,u:"mm"},
+      {k:"f",l:"Avanço F",d:120,s:10,u:"mm/min"},
+    ],
+    warn(p,c,d){ const w=[];
+      if(p.n<1) w.push("Quantidade de furos deve ser 1 ou mais.");
+      if(p.prof>c.bz) w.push("Furo mais profundo que a altura do bloco (furo passante).");
+      return w; },
+    gerar(p,c,nb,d){
+      const ciclo = p.q>0 ? `G83` : `G81`;
+      const qtxt  = p.q>0 ? `Q${fx(p.q)}` : ``;
+      const L=[];
+      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
+      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
+      L.push(`#7=${fnum(p.dc/2)}(RAIO DO CIRCULO DE FUROS)`);
+      L.push(`#25=${fnum(Math.max(1,Math.round(p.n)))}(QTD DE FUROS)`);
+      L.push(`#32=360/#25(PASSO ANGULAR)`);
+      L.push(`#33=${fnum(p.a0)}(ANGULO ATUAL)`);
+      L.push(`#15=0(CONTADOR)`);
+      L.push(`N${nb+10}#30=#23+[#7*COS[#33]](X DO FURO)`);
+      L.push(`#31=#24+[#7*SIN[#33]](Y DO FURO)`);
+      L.push(`G0X[#30]Y[#31]`);
+      L.push(`G98${ciclo}X[#30]Y[#31]Z-${fx(p.prof)}R2.${qtxt}F${fnum(p.f)}`);
+      L.push(`G80`);
+      L.push(`#33=#33+#32`);
+      L.push(`#15=#15+1`);
+      L.push(`IF[#15LT#25]GOTO${nb+10}`);
+      return L;
+    },
+    volume(p){
+      const grp=new THREE.Group();
+      const n=Math.max(1,Math.round(p.n));
+      for(let i=0;i<n;i++){
+        const a=(p.a0+i*360/n)*Math.PI/180;
+        const m=new THREE.Mesh(new THREE.CylinderGeometry(p.dia/2,p.dia/2,p.prof,24));
+        m.position.set(p.cx+(p.dc/2)*Math.cos(a), -p.prof/2, -(p.cy+(p.dc/2)*Math.sin(a)));
+        grp.add(m);
+      }
+      return grp;
+    }
+  },
+};
+const ORDEM = ["face","bolsaRet","bolsaCirc","bolsaCon","escariado","canal","canalR","furosL","furosC"];
+
+/* ============================================================
+   MACROS PERSONALIZADOS (cadastrados pelo usuário)
+   CUSTOM[id] = {nome, sub, corIdx, params:[{k,l,d,s,u}], codigo}
+   Ao registrar, vira uma DEF normal: tokens {chave} são
+   substituídos, rótulos N10–N99 e GOTOs são renumerados com nb,
+   e o volume 3D é o caminho da ferramenta simulado pelo
+   interpretador (execNC).
+   ============================================================ */
+let CUSTOM = {};
+let CUSTOM_SEQ = 1;
+const CORES_FAM = [
+  {css:"var(--amber)",  hex:0xffb02e},
+  {css:"var(--green)",  hex:0x3ecf8e},
+  {css:"var(--cyan)",   hex:0x4dd0e1},
+  {css:"var(--violet)", hex:0xb388ff},
+  {css:"var(--blue)",   hex:0x6ea8fe},
+  {css:"var(--red)",    hex:0xf0625a},
+];
+
+function tokensDoCodigo(cod){
+  const t=new Set();
+  (cod.match(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g)||[]).forEach(m=>t.add(m.slice(1,-1)));
+  t.delete("DIAM"); t.delete("RF");
+  return [...t];
+}
+
+function registrarCustom(id, raw){
+  CUSTOM[id]=raw;
+  const cor=CORES_FAM[raw.corIdx % CORES_FAM.length];
+  DEFS[id]={
+    nome:raw.nome, sub:raw.sub||"macro personalizado", cor:cor.css, hex:cor.hex,
+    params:raw.params.map(p=>({k:p.k,l:p.l,d:p.d,s:p.s||1,u:p.u||""})),
+    warn(p,c,d){
+      const w=[];
+      const semParam=tokensDoCodigo(raw.codigo).filter(t=>!(t in p));
+      if(semParam.length) w.push("Tokens sem parâmetro cadastrado: {"+semParam.join("} {")+"}.");
+      if(raw.vars) Object.keys(raw.vars).forEach(n=>{
+        if(raw.vars[n].inc && !raw.codigo.includes("#"+n+"=#"+n+"+"))
+          w.push(`Variável #${n} marcada com incremento, mas o código não tem #${n}=#${n}+...`);
+      });
+      return w;
+    },
+    gerar(p,c,nb,d){
+      const decl=[];
+      if(raw.vars){
+        const noCod=(function(){
+          const s=new Set();
+          raw.codigo.split(/\r?\n/).forEach(l=>{
+            l=l.trim().replace(/^N\d+/,"");
+            const m=l.match(/^#(\d+)=(.*)$/);
+            if(m && !m[2].includes("#"+m[1])) s.add(+m[1]);
+          });
+          return s;
+        })();
+        Object.keys(raw.vars).map(Number).sort((a,b)=>a-b).forEach(n=>{
+          if(noCod.has(n)) return;
+          const v=raw.vars[n];
+          let val=String(v.v??"0").trim()||"0";
+          val=val.replace(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g,(m,k)=>{
+            if(k==="DIAM") return fnum(d);
+            if(k==="RF")   return fnum(d/2);
+            return (k in p) ? fnum(p[k]) : m;
+          });
+          decl.push(`#${n}=${val}${v.com?`(${noAcc(v.com)})`:""}`);
+        });
+      }
+      return decl.concat(raw.codigo.split(/\r?\n/)
+        .map(l=>l.trim())
+        .filter(l=>l.length)
+        .map(l=>{
+          l=l.replace(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g,(m,k)=>{
+            if(k==="DIAM") return fnum(d);
+            if(k==="RF")   return fnum(d/2);
+            return (k in p) ? fnum(p[k]) : m;
+          });
+          l=l.replace(/\bN(\d{1,2})\b/g,(m,n)=>"N"+(nb+ +n));
+          l=l.replace(/GOTO(\d{1,2})\b/g,(m,n)=>"GOTO"+(nb+ +n));
+          return l;
+        }));
+    },
+    volume(p,c,d){
+      const linhas=["G0Z2."].concat(this.gerar(p,c,100,d));
+      const res=execNC(linhas.join("\n"));
+      if(!res.segs.length) return null;
+      const grp=new THREE.Group();
+      const feed=[],rapid=[];
+      res.segs.forEach(s=>{
+        (s.rapid?rapid:feed).push(s.ax,s.az,-s.ay, s.bx,s.bz,-s.by);
+      });
+      function linha(arr,corHex,op){
+        if(!arr.length) return;
+        const g=new THREE.BufferGeometry();
+        g.setAttribute("position", new THREE.Float32BufferAttribute(arr,3));
+        grp.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:corHex,transparent:true,opacity:op})));
+      }
+      linha(feed, cor.hex, 0.95);
+      linha(rapid, 0x5a6572, 0.3);
+      return grp;
+    }
+  };
+}
+function removerCustom(id){
+  delete CUSTOM[id]; delete DEFS[id];
+  SEQ=SEQ.filter(b=>b.tipo!==id);
+}
+
+/* ============================================================
+   MONTAGEM DO PROGRAMA
+   ============================================================ */
+function gerarPrograma(){
+  const c=cfg();
+  const L=[];
+  L.push("%");
+  L.push(`<${c.nome}>`);
+  L.push("(X - CENTRO / Y - CENTRO / Z - FACE SUPERIOR)");
+  L.push("G90G17G40G80");
+  L.push(`#26=${fnum(c.seg)}(Z DE SEGURANCA)`);
+  let ant=null;   // ferramenta ativa {t,ts,th,tdd}
+  SEQ.forEach((b,i)=>{
+    const D=DEFS[b.tipo];
+    const nb=(i+1)*100;
+    const dLocal = b.p.td;   // cada bloco tem a própria ferramenta
+    L.push("");
+    L.push(`(===== BLOCO ${i+1} - ${noAcc(D.nome)} =====)`);
+    const mudouT = !ant || ant.t!==b.p.t || ant.th!==b.p.th || ant.tdd!==b.p.tdd;
+    if(mudouT){
+      if(ant){ L.push(`G0Z[#26]`); L.push("M5M9"); }
+      L.push(`T${fnum(b.p.t)}(FERRAMENTA ${fnum(b.p.td)})`);
+      L.push("M6");
+      L.push("G54");
+      L.push(`S${fnum(b.p.ts)}M3M8`);
+      L.push(`G0G43Z[#26]H${fnum(b.p.th)}D${fnum(b.p.tdd)}`);
+    } else if(ant.ts!==b.p.ts){
+      L.push(`S${fnum(b.p.ts)}M3M8(NOVA ROTACAO)`);
+    }
+    ant={t:b.p.t, ts:b.p.ts, th:b.p.th, tdd:b.p.tdd};
+    L.push(...D.gerar(b.p,c,nb,dLocal));
+    L.push(`G0Z[#26]`);
+  });
+  L.push("");
+  L.push("M5M9");
+  if(c.g53) L.push("G53Y300");
+  L.push("M30");
+  L.push("%");
+  return L.join("\n");
+}
+
+function coletarWarns(){
+  const c=cfg(); const out=[];
+  if(SEQ.length===0) return out;
+  SEQ.forEach((b,i)=>{
+    const D=DEFS[b.tipo];
+    const dLocal = b.p.td;
+    if(!(dLocal>0)) out.push(`Bloco ${i+1} (${D.nome}): informe o Ø da ferramenta deste bloco.`);
+    if(!(b.p.t>0)) out.push(`Bloco ${i+1} (${D.nome}): informe o T da ferramenta deste bloco.`);
+    (D.warn(b.p,c,dLocal)||[]).forEach(w=>out.push(`Bloco ${i+1} (${D.nome}): ${w}`));
+    /* regras gerais de corte (skill cnc-programming) */
+    if(b.p.ap!==undefined && dLocal>0 && b.p.ap > dLocal*1.5)
+      out.push(`Bloco ${i+1} (${D.nome}): passo Z (${b.p.ap}) acima de 1,5× o Ø da fresa (${dLocal}) — reduza o ap ou aumente a ferramenta.`);
+    if(b.p.fz!==undefined && b.p.f!==undefined && b.p.f>0 && b.p.fz > b.p.f*0.55)
+      out.push(`Bloco ${i+1} (${D.nome}): F de mergulho (${b.p.fz}) acima de 50% do F de corte (${b.p.f}) — recomendado 30–50%.`);
+  });
+  return out;
+}
+
+/* ============================================================
+   UI — PALETA
+   ============================================================ */
+function renderPaleta(){
+  const el=$("paleta");
+  el.innerHTML="";
+  ORDEM.concat(Object.keys(CUSTOM)).forEach(t=>{
+    const D=DEFS[t];
+    if(!D) return;
+    const b=document.createElement("button");
+    b.className="pal"; b.style.setProperty("--c",D.cor);
+    const custom=!!CUSTOM[t];
+    b.innerHTML=`<span class="plus">+</span>${D.nome}<small>${D.sub||""}</small>${custom?`<span class="edit" data-edit="${t}" title="Editar macro">✎</span>`:""}`;
+    b.addEventListener("click",e=>{
+      const ed=e.target.closest("[data-edit]");
+      if(ed){ e.stopPropagation(); abrirEditor(ed.dataset.edit); return; }
+      addBloco(t);
+    });
+    el.appendChild(b);
+  });
+}
+renderPaleta();
+
+function addBloco(tipo){
+  const D=DEFS[tipo];
+  const p={};
+  D.params.forEach(f=>p[f.k]=f.d);
+  F_TROCA.forEach(f=>p[f.k]=f.d);
+  SEQ.forEach(b=>b.aberto=false);
+  SEQ.push({uid:UID++, tipo, aberto:true, p});
+  SELECIONADO=SEQ[SEQ.length-1].uid;
+  renderPilha(); refresh();
+  toast(D.nome+" adicionado");
+}
+
+/* ============================================================
+   UI — PILHA
+   ============================================================ */
+function campoHTML(f,val,uid){
+  if(f.sel){
+    return `<div class="field" style="grid-column:1/-1"><label>${f.l}</label>
+      <div class="inrow"><select data-uid="${uid}" data-k="${f.k}">
+        ${f.sel.map(o=>`<option value="${o.v}"${o.v===val?" selected":""}>${o.t}</option>`).join("")}
+      </select></div></div>`;
+  }
+  if(f.chk){
+    return `<label class="chk" style="grid-column:1/-1"><input type="checkbox" data-uid="${uid}" data-k="${f.k}"${val?" checked":""}> ${f.l}</label>`;
+  }
+  return `<div class="field"><label>${f.l}</label>
+    <div class="inrow">
+      <input type="number" step="${f.s||1}" value="${val}" data-uid="${uid}" data-k="${f.k}">
+      ${f.u?`<span class="unit">${f.u}</span>`:""}
+    </div></div>`;
+}
+
+function renderPilha(){
+  const el=$("pilha");
+  $("qtd").textContent = SEQ.length ? `· ${SEQ.length} bloco${SEQ.length>1?"s":""}` : "";
+  if(!SEQ.length){
+    el.innerHTML=`<div class="vazio">Pilha vazia.<br>Toque numa peça acima para começar a montar.</div>`;
+    return;
+  }
+  el.innerHTML="";
+  SEQ.forEach((b,i)=>{
+    const D=DEFS[b.tipo];
+    const div=document.createElement("div");
+    div.className="bloco"+(b.aberto?"":" fechado")+(SELECIONADO===b.uid?" sel":"");
+    div.style.setProperty("--c",D.cor);
+    div.dataset.uid=b.uid;
+    div.innerHTML=`
+      <div class="bhead">
+        <div class="bnum">${i+1}</div>
+        <div class="btit">${D.nome}<small>${D.sub}</small></div>
+        <div class="bacts">
+          <button class="ib" data-a="up"   title="Subir">▲</button>
+          <button class="ib" data-a="down" title="Descer">▼</button>
+          <button class="ib" data-a="dup"  title="Duplicar">⧉</button>
+          <button class="ib del" data-a="del" title="Remover">✕</button>
+        </div>
+      </div>
+      <div class="bbody">
+        <div class="grid3">${D.params.map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>
+        <div class="sub">Ferramenta deste bloco</div>
+        <div class="grid3">
+          ${F_TROCA.map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}
+        </div>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+$("pilha").addEventListener("click",e=>{
+  const btn=e.target.closest(".ib");
+  const head=e.target.closest(".bhead");
+  const card=e.target.closest(".bloco");
+  if(!card) return;
+  const uid=+card.dataset.uid;
+  const i=SEQ.findIndex(b=>b.uid===uid);
+  if(btn){
+    const a=btn.dataset.a;
+    if(a==="del"){ SEQ.splice(i,1); if(SELECIONADO===uid) SELECIONADO=null; }
+    if(a==="up"   && i>0){ [SEQ[i-1],SEQ[i]]=[SEQ[i],SEQ[i-1]]; }
+    if(a==="down" && i<SEQ.length-1){ [SEQ[i+1],SEQ[i]]=[SEQ[i],SEQ[i+1]]; }
+    if(a==="dup"){ const c=JSON.parse(JSON.stringify(SEQ[i])); c.uid=UID++; c.aberto=false; SEQ.splice(i+1,0,c); }
+    renderPilha(); refresh(); return;
+  }
+  if(head){
+    SEQ[i].aberto=!SEQ[i].aberto;
+    SELECIONADO = uid;
+    renderPilha(); refresh3DSelecao();
+  }
+});
+
+function onEditPilha(e){
+  const inp=e.target;
+  if(!inp.dataset || !inp.dataset.uid) return;
+  const b=SEQ.find(x=>x.uid===+inp.dataset.uid);
+  if(!b) return;
+  if(inp.tagName==="SELECT"){
+    b.p[inp.dataset.k]=inp.value;
+  } else if(inp.type==="checkbox"){
+    b.p[inp.dataset.k]=inp.checked;
+  } else {
+    b.p[inp.dataset.k]=num(inp.value, b.p[inp.dataset.k]);
+  }
+  refreshDebounced();
+}
+$("pilha").addEventListener("input",onEditPilha);
+$("pilha").addEventListener("change",onEditPilha);
+
+/* ---------- salvar / abrir / limpar ---------- */
+$("salvarM").addEventListener("click",()=>{
+  const data={cfg:{}, seq:SEQ, custom:CUSTOM};
+  ["nome","seg","bx","by","bz","cdiam"].forEach(k=>data.cfg[k]=$("g-"+k).value);
+  data.cfg.g53=$("g-g53").checked;
+  data.cfg.mat=$("g-mat").value;
+  data.cfg.z=$("g-z").value;
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:"application/json"}));
+  a.download=(cfg().nome||"MONTAGEM")+".json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast("Montagem salva");
+});
+$("abrirM").addEventListener("click",()=>$("fileM").click());
+$("fileM").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+      const d=JSON.parse(r.result);
+      if(d.cfg){ Object.keys(d.cfg).forEach(k=>{
+        const el=$("g-"+k); if(!el) return;
+        if(k==="g53") el.checked=!!d.cfg[k]; else el.value=d.cfg[k];
+      }); }
+      Object.keys(CUSTOM).forEach(removerCustom);
+      if(d.custom){
+        Object.keys(d.custom).forEach(id=>{
+          registrarCustom(id, d.custom[id]);
+          const n=+id.replace(/\D/g,"");
+          if(n>=CUSTOM_SEQ) CUSTOM_SEQ=n+1;
+        });
+      }
+      renderPaleta();
+      SEQ=(d.seq||[]).filter(b=>DEFS[b.tipo]).map(b=>{
+        const nb={...b, uid:UID++, p:{...(b.p||{})}};
+        DEFS[b.tipo].params.forEach(f=>{ if(!(f.k in nb.p)) nb.p[f.k]=f.d; });
+        F_TROCA.forEach(f=>{ if(!(f.k in nb.p)) nb.p[f.k]=f.d; });
+        return nb;
+      });
+      SELECIONADO=null;
+      renderPilha(); refresh();
+      toast("Montagem carregada");
+    }catch(err){ toast("Arquivo inválido"); } };
+  r.readAsText(f);
+  e.target.value="";
+});
+$("limparM").addEventListener("click",()=>{
+  if(!SEQ.length) return;
+  SEQ=[]; SELECIONADO=null; renderPilha(); refresh();
+  toast("Pilha limpa");
+});
+
+/* ---------- copiar / baixar ---------- */
+$("copiar").addEventListener("click",async ()=>{
+  try{ await navigator.clipboard.writeText($("saida").textContent); toast("Código copiado"); }
+  catch(e){
+    const ta=document.createElement("textarea");
+    ta.value=$("saida").textContent; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); ta.remove();
+    toast("Código copiado");
+  }
+});
+$("baixar").addEventListener("click",()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([$("saida").textContent],{type:"text/plain"}));
+  a.download=cfg().nome+".NC"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast("Arquivo .NC baixado");
+});
+
+/* ============================================================
+   REFRESH GERAL (código + avisos + 3D)
+   ============================================================ */
+let _deb=null;
+function refreshDebounced(){ clearTimeout(_deb); _deb=setTimeout(refresh,180); }
+
+function refresh(){
+  const code=gerarPrograma();
+  $("saida").textContent=code;
+  $("linhas").textContent=code.split("\n").length+" linhas";
+  $("nomeArq").textContent=cfg().nome+".NC";
+  const ws=coletarWarns();
+  $("warns").innerHTML=ws.map(w=>`<div class="${w.includes("ERRO:")?"errrow":"warnrow"}">${w.includes("ERRO:")?"⛔":"⚠"} ${w}</div>`).join("");
+  refresh3D();
+  renderLegenda();
+}
+
+function renderLegenda(){
+  const el=$("legenda");
+  el.innerHTML="";
+  SEQ.forEach((b,i)=>{
+    const D=DEFS[b.tipo];
+    const c=document.createElement("button");
+    c.className="lg"+(SELECIONADO===b.uid?" on":"");
+    c.style.setProperty("--c",D.cor);
+    c.innerHTML=`<span class="dot"></span>${i+1} · ${D.nome}`;
+    c.addEventListener("click",()=>{
+      SELECIONADO = (SELECIONADO===b.uid) ? null : b.uid;
+      document.querySelectorAll(".bloco").forEach(x=>x.classList.toggle("sel", +x.dataset.uid===SELECIONADO));
+      renderLegenda(); refresh3DSelecao();
+    });
+    el.appendChild(c);
+  });
+  IMPORTS.forEach((imp,i)=>{
+    const c=document.createElement("button");
+    c.className="lg imp"+(imp.visivel?"":" off");
+    c.style.setProperty("--c","#"+imp.hex.toString(16).padStart(6,"0"));
+    c.title="Toque para mostrar/ocultar · ✕ remove";
+    c.innerHTML=`<span class="dot"></span>NC · ${imp.nome}<span class="x" data-imp="${i}">✕</span>`;
+    c.addEventListener("click",e=>{
+      if(e.target.classList.contains("x")){
+        IMPORTS.splice(i,1);
+        refreshImports(); renderLegenda();
+        toast("Importação removida");
+        return;
+      }
+      imp.visivel=!imp.visivel;
+      refreshImports(); renderLegenda();
+    });
+    el.appendChild(c);
+  });
+}
+
+/* ============================================================
+   PREVIEW 3D (Three.js)
+   Mapeamento CNC → cena: three(x, z, -y)  ·  Z0 = topo do bloco
+   ============================================================ */
+let scene, camera, renderer, stockMesh, stockEdges, gridH, volGroup;
+let cam = {theta: Math.PI/4, phi: Math.PI/3.2, r: 420, tgt: null};
+let TEM3D = (typeof THREE !== "undefined");
+
+function init3D(){
+  const wrap=$("canvasWrap");
+  if(!TEM3D){
+    const d=document.createElement("div");
+    d.className="visoff";
+    d.textContent="Preview 3D indisponível (sem conexão para carregar o Three.js). O gerador de código continua funcionando normalmente.";
+    wrap.appendChild(d);
+    return;
+  }
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x0a0d10);
+  scene.fog=new THREE.Fog(0x0a0d10, 900, 2200);
+
+  camera=new THREE.PerspectiveCamera(45, 1, 1, 5000);
+  cam.tgt=new THREE.Vector3(0,-15,0);
+
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  wrap.insertBefore(renderer.domElement, wrap.firstChild);
+
+  scene.add(new THREE.AmbientLight(0xffffff,0.65));
+  const dl=new THREE.DirectionalLight(0xffffff,0.75);
+  dl.position.set(200,400,250); scene.add(dl);
+  const dl2=new THREE.DirectionalLight(0x8899bb,0.3);
+  dl2.position.set(-250,150,-200); scene.add(dl2);
+
+  volGroup=new THREE.Group(); scene.add(volGroup);
+
+  /* eixos */
+  const c=cfg();
+  addEixos(c);
+
+  /* controles: girar / zoom / pinça */
+  const cv=renderer.domElement;
+  const ptrs=new Map();
+  let lastDist=0;
+  cv.addEventListener("pointerdown",e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
+  cv.addEventListener("pointerup",  e=>{ ptrs.delete(e.pointerId); lastDist=0; });
+  cv.addEventListener("pointercancel",e=>{ ptrs.delete(e.pointerId); lastDist=0; });
+  cv.addEventListener("pointermove",e=>{
+    if(!ptrs.has(e.pointerId)) return;
+    const p=ptrs.get(e.pointerId);
+    if(ptrs.size===1){
+      cam.theta -= (e.clientX-p.x)*0.008;
+      cam.phi    = clamp(cam.phi-(e.clientY-p.y)*0.008, 0.05, Math.PI/2-0.02);
+      posCam();
+    } else if(ptrs.size===2){
+      p.x=e.clientX; p.y=e.clientY;
+      const arr=[...ptrs.values()];
+      const d=Math.hypot(arr[0].x-arr[1].x, arr[0].y-arr[1].y);
+      if(lastDist>0){ cam.r=clamp(cam.r*(lastDist/d), 60, 2000); posCam(); }
+      lastDist=d;
+    }
+    p.x=e.clientX; p.y=e.clientY;
+  });
+  cv.addEventListener("wheel",e=>{
+    e.preventDefault();
+    cam.r=clamp(cam.r*(e.deltaY>0?1.1:0.9), 60, 2000);
+    posCam();
+  },{passive:false});
+
+  document.querySelectorAll(".vb").forEach(b=>{
+    b.addEventListener("click",()=>{
+      document.querySelectorAll(".vb").forEach(x=>x.classList.toggle("on",x===b));
+      const v=b.dataset.v;
+      if(v==="iso"){cam.theta=Math.PI/4; cam.phi=Math.PI/3.2;}
+      if(v==="topo"){cam.theta=Math.PI/2; cam.phi=0.06;}
+      if(v==="frente"){cam.theta=Math.PI/2; cam.phi=Math.PI/2-0.03;}
+      posCam();
+    });
+  });
+
+  const ro=new ResizeObserver(()=>{ redim(); });
+  ro.observe(wrap);
+  redim();
+  posCam();
+}
+
+let eixosGrp=null;
+function addEixos(c){
+  if(eixosGrp) scene.remove(eixosGrp);
+  eixosGrp=new THREE.Group();
+  const L=Math.max(c.bx,c.by)*0.72;
+  function linha(a,b,cor){
+    const g=new THREE.BufferGeometry().setFromPoints([a,b]);
+    eixosGrp.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:cor})));
+  }
+  const o=new THREE.Vector3(-c.bx/2-14, -c.bz, c.by/2+14);
+  linha(o, o.clone().add(new THREE.Vector3(L*0.5,0,0)), 0xf0625a);           // X+
+  linha(o, o.clone().add(new THREE.Vector3(0,0,-L*0.5)), 0x3ecf8e);          // Y+
+  linha(o, o.clone().add(new THREE.Vector3(0,L*0.45,0)), 0x6ea8fe);          // Z+
+  function rot(txt,cor,pos){
+    const cv=document.createElement("canvas"); cv.width=cv.height=64;
+    const g=cv.getContext("2d");
+    g.font="700 40px JetBrains Mono, monospace"; g.fillStyle=cor;
+    g.textAlign="center"; g.textBaseline="middle"; g.fillText(txt,32,34);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true}));
+    sp.scale.set(18,18,1); sp.position.copy(pos); eixosGrp.add(sp);
+  }
+  rot("X","#f0625a", o.clone().add(new THREE.Vector3(L*0.5+12,0,0)));
+  rot("Y","#3ecf8e", o.clone().add(new THREE.Vector3(0,0,-L*0.5-12)));
+  rot("Z","#6ea8fe", o.clone().add(new THREE.Vector3(0,L*0.45+12,0)));
+  scene.add(eixosGrp);
+}
+
+function redim(){
+  if(!TEM3D) return;
+  const wrap=$("canvasWrap");
+  const w=wrap.clientWidth, h=wrap.clientHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+  draw();
+}
+
+function posCam(){
+  const sp=Math.sin(cam.phi), cp=Math.cos(cam.phi);
+  camera.position.set(
+    cam.tgt.x + cam.r*sp*Math.cos(cam.theta),
+    cam.tgt.y + cam.r*cp,
+    cam.tgt.z + cam.r*sp*Math.sin(cam.theta)
+  );
+  camera.lookAt(cam.tgt);
+  draw();
+}
+
+function draw(){ if(TEM3D && renderer) renderer.render(scene,camera); }
+
+/* --- reconstrução do bloco de material + volumes --- */
+let ultimoBloco="";
+function refresh3D(){
+  if(!TEM3D) return;
+  const c=cfg();
+
+  const chave=[c.bx,c.by,c.bz].join("x");
+  if(chave!==ultimoBloco){
+    ultimoBloco=chave;
+    if(stockMesh){scene.remove(stockMesh); scene.remove(stockEdges); scene.remove(gridH);}
+    const g=new THREE.BoxGeometry(c.bx,c.bz,c.by);
+    stockMesh=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x6b7684,transparent:true,opacity:0.13,depthWrite:false}));
+    stockMesh.position.set(0,-c.bz/2,0);
+    scene.add(stockMesh);
+    stockEdges=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x55606c}));
+    stockEdges.position.copy(stockMesh.position);
+    scene.add(stockEdges);
+    gridH=new THREE.GridHelper(Math.max(c.bx,c.by)*1.6, 16, 0x2b323c, 0x1c2127);
+    gridH.position.y=-c.bz-0.5;
+    scene.add(gridH);
+    addEixos(c);
+    cam.r=Math.max(c.bx,c.by,c.bz)*2.1;
+    cam.tgt=new THREE.Vector3(0,-c.bz*0.35,0);
+    posCam();
+  }
+
+  /* volumes de remoção */
+  volGroup.children.slice().forEach(m=>{
+    volGroup.remove(m);
+    m.traverse?.(o=>{o.geometry?.dispose(); o.material?.dispose?.();});
+  });
+  SEQ.forEach(b=>{
+    const D=DEFS[b.tipo];
+    const dLocal = b.p.td;
+    let obj;
+    try{ obj=D.volume(b.p,c,dLocal); }catch(e){ return; }
+    if(!obj) return;
+    const mat=new THREE.MeshLambertMaterial({color:D.hex,transparent:true,opacity:0.8});
+    obj.traverse(o=>{ if(o.isMesh) o.material=mat; });
+    if(obj.isMesh) obj.material=mat;
+    obj.userData.uid=b.uid;
+    obj.position.y+=0.02;
+    volGroup.add(obj);
+  });
+  refresh3DSelecao();
+}
+
+function refresh3DSelecao(){
+  if(!TEM3D) return;
+  volGroup.children.forEach(o=>{
+    const sel = SELECIONADO===o.userData.uid;
+    const nada = SELECIONADO===null;
+    const mat = o.isMesh ? o.material : (o.children[0]&&o.children[0].material);
+    if(!mat) return;
+    mat.opacity = nada ? 0.8 : (sel ? 0.95 : 0.22);
+    mat.emissive = new THREE.Color(sel ? 0x332200 : 0x000000);
+  });
+  renderLegendaEstado();
+  draw();
+}
+function renderLegendaEstado(){
+  document.querySelectorAll("#legenda .lg").forEach((el,i)=>{
+    el.classList.toggle("on", SEQ[i] && SEQ[i].uid===SELECIONADO);
+  });
+}
+
+/* ============================================================
+   IMPORTAÇÃO DE .NC — interpretador Fanuc / Macro B
+   Simula o programa e devolve os segmentos do caminho da
+   ferramenta (rápido G0 vs corte G1/G2/G3) para o preview 3D.
+   ============================================================ */
+const IMPORTS = [];               // {uid, nome, segs, visivel, hex, avisos}
+const CORES_IMP = [0x6ea8fe, 0xff8fab, 0xffd166, 0x9ef01a, 0xf0625a, 0xffffff];
+
+function execNC(texto){
+  const avisos=[];
+  const segs=[];                  // {ax,ay,az, bx,by,bz, rapid}
+  /* ---- pré-processamento ---- */
+  const brutas = texto.split(/\r?\n/);
+  const stmts=[]; const labels={};
+  for(let i=0;i<brutas.length;i++){
+    let l=brutas[i];
+    l=l.replace(/\(.*?\)/g,"").replace(/;.*$/,"");
+    l=l.toUpperCase().replace(/\s+/g,"");
+    if(!l || l==="%" ) continue;
+    if(/^O\d+$/.test(l)) continue;
+    if(/^<.*>$/.test(l)) continue;
+    const m=l.match(/^N(\d+)/);
+    if(m){ labels[+m[1]]=stmts.length; l=l.slice(m[0].length); if(!l) { stmts.push(""); continue; } }
+    stmts.push(l);
+  }
+
+  /* ---- avaliador de expressões ---- */
+  const vars={};
+  const FN={SIN:x=>Math.sin(x*Math.PI/180),COS:x=>Math.cos(x*Math.PI/180),
+    TAN:x=>Math.tan(x*Math.PI/180),ASIN:x=>Math.asin(x)*180/Math.PI,
+    ACOS:x=>Math.acos(x)*180/Math.PI,ATAN:x=>Math.atan(x)*180/Math.PI,
+    SQRT:Math.sqrt,ABS:Math.abs,ROUND:Math.round,FIX:Math.floor,FUP:Math.ceil,
+    LN:Math.log,EXP:Math.exp};
+  function evalExpr(s){
+    let p=0;
+    function ws(){ /* já sem espaços */ }
+    function achaFecha(str,i0){ let n=0;
+      for(let i=i0;i<str.length;i++){ if(str[i]==="[")n++; if(str[i]==="]"){n--; if(n===0)return i;} }
+      return -1; }
+    function primario(){
+      if(s[p]==="["){ const f=achaFecha(s,p); const v=evalExpr(s.slice(p+1,f)); p=f+1; return v; }
+      if(s[p]==="#"){
+        p++;
+        if(s[p]==="["){ const f=achaFecha(s,p); const idx=evalExpr(s.slice(p+1,f)); p=f+1; return vars[Math.round(idx)]||0; }
+        let n=""; while(/\d/.test(s[p])) n+=s[p++];
+        return vars[+n]||0;
+      }
+      for(const fn in FN){
+        if(s.startsWith(fn,p) && s[p+fn.length]==="["){
+          p+=fn.length; const f=achaFecha(s,p);
+          const v=FN[fn](evalExpr(s.slice(p+1,f))); p=f+1; return v;
+        }
+      }
+      let n=""; while(/[\d.]/.test(s[p])) n+=s[p++];
+      return parseFloat(n)||0;
+    }
+    function unario(){ if(s[p]==="-"){p++; return -unario();} if(s[p]==="+"){p++; return unario();} return primario(); }
+    function termo(){ let v=unario();
+      for(;;){ if(s[p]==="*"){p++; v*=unario();}
+        else if(s[p]==="/"){p++; const d=unario(); v = d===0?0:v/d;}
+        else if(s.startsWith("MOD",p)){p+=3; v%=unario();}
+        else break; }
+      return v; }
+    function soma(){ let v=termo();
+      for(;;){ if(s[p]==="+"){p++; v+=termo();} else if(s[p]==="-"){p++; v-=termo();} else break; }
+      return v; }
+    return soma();
+  }
+  function evalCond(cond){
+    const m=cond.match(/(EQ|NE|GT|GE|LT|LE)/);
+    if(!m) return evalExpr(cond)!==0;
+    const a=evalExpr(cond.slice(0,m.index)), b=evalExpr(cond.slice(m.index+2));
+    switch(m[1]){case"EQ":return a===b;case"NE":return a!==b;case"GT":return a>b;
+      case"GE":return a>=b;case"LT":return a<b;case"LE":return a<=b;}
+  }
+  function achaFechaTop(str,i0){ let n=0;
+    for(let i=i0;i<str.length;i++){ if(str[i]==="[")n++; if(str[i]==="]"){n--; if(n===0)return i;} }
+    return -1; }
+
+  /* ---- estado da máquina ---- */
+  let pos={x:0,y:0,z:0};
+  let motion=0, abs=true, mirrorX=null;
+  let ciclo=null, g98=true, zInicial=0;
+  let parado=false, execs=0;
+  const MAXE=400000, MAXS=160000;
+
+  function alvo(w){
+    const t={...pos};
+    ["x","y","z"].forEach(k=>{
+      const K=k.toUpperCase();
+      if(w[K]!==undefined) t[k]= abs ? w[K] : pos[k]+w[K];
+    });
+    return t;
+  }
+  function mx(x){ return mirrorX===null ? x : 2*mirrorX - x; }
+  function seg(a,b,rapid){
+    if(segs.length>=MAXS) return;
+    segs.push({ax:mx(a.x),ay:a.y,az:a.z, bx:mx(b.x),by:b.y,bz:b.z, rapid});
+  }
+  function arco(w,cw){
+    const fim=alvo(w);
+    let cx,cy;
+    if(w.R!==undefined && (w.X!==undefined||w.Y!==undefined)){
+      const dx=fim.x-pos.x, dy=fim.y-pos.y, q=Math.hypot(dx,dy);
+      const r=Math.abs(w.R);
+      if(q===0||q>2*r+1e-6){ seg(pos,fim,false); pos=fim; return; }
+      const h=Math.sqrt(Math.max(0,r*r-q*q/4));
+      const sgn=(cw?1:-1)*(w.R<0?-1:1);
+      cx=pos.x+dx/2 - sgn*h*dy/q;
+      cy=pos.y+dy/2 + sgn*h*dx/q;
+    } else {
+      cx=pos.x+(w.I||0); cy=pos.y+(w.J||0);
+    }
+    const r=Math.hypot(pos.x-cx,pos.y-cy);
+    let a0=Math.atan2(pos.y-cy,pos.x-cx);
+    let a1=Math.atan2(fim.y-cy,fim.x-cx);
+    let da=a1-a0;
+    if(cw){ if(da>=-1e-9) da-=2*Math.PI; } else { if(da<=1e-9) da+=2*Math.PI; }
+    if(Math.abs(fim.x-pos.x)<1e-9 && Math.abs(fim.y-pos.y)<1e-9) da = cw?-2*Math.PI:2*Math.PI;
+    const passos=Math.max(4, Math.ceil(Math.abs(da)/(Math.PI/36)));
+    let ant={...pos};
+    for(let i=1;i<=passos;i++){
+      const a=a0+da*i/passos;
+      const pt={x:cx+r*Math.cos(a), y:cy+r*Math.sin(a), z:pos.z+(fim.z-pos.z)*i/passos};
+      seg(ant,pt,false); ant=pt;
+    }
+    pos=fim;
+  }
+
+  /* ---- execução ---- */
+  let pc=0;
+  while(pc<stmts.length && !parado){
+    if(++execs>MAXE){ avisos.push("Simulação interrompida: limite de execução atingido (laço infinito?)."); break; }
+    const l=stmts[pc]; pc++;
+    if(!l) continue;
+
+    let m;
+    if((m=l.match(/^#(\d+)=(.+)$/))){ vars[+m[1]]=evalExpr(m[2]); continue; }
+    if(l.startsWith("IF[")){
+      const f=achaFechaTop(l,2);
+      if(f<0){ avisos.push("IF malformado: "+l); continue; }
+      const cond=l.slice(3,f), resto=l.slice(f+1);
+      if(!evalCond(cond)) continue;
+      if((m=resto.match(/^GOTO(\d+)/))){ const d=labels[+m[1]]; if(d===undefined){avisos.push("GOTO"+m[1]+" sem rótulo N"+m[1]);} else pc=d; continue; }
+      if((m=resto.match(/^THEN#(\d+)=(.+)$/))){ vars[+m[1]]=evalExpr(m[2]); continue; }
+      avisos.push("IF não suportado: "+l); continue;
+    }
+    if((m=l.match(/^GOTO(\d+)/))){ const d=labels[+m[1]]; if(d===undefined){avisos.push("GOTO"+m[1]+" sem rótulo N"+m[1]); } else pc=d; continue; }
+    if(l.startsWith("WHILE")){ avisos.push("WHILE/DO não suportado — trecho ignorado."); continue; }
+
+    /* linha de palavras (G/M/X/Y/Z...) */
+    const w={}; const gs=[]; const ms=[];
+    let i=0, ok=true;
+    while(i<l.length){
+      const letra=l[i];
+      if(!/[A-Z]/.test(letra)){ ok=false; break; }
+      i++;
+      let neg=false;
+      if(l[i]==="-"){ neg=true; i++; }
+      let val;
+      if(l[i]==="["){ const f=achaFechaTop(l,i); if(f<0){ok=false;break;} val=evalExpr(l.slice(i+1,f)); i=f+1; }
+      else if(l[i]==="#"){ let j=i+1, n=""; while(/\d/.test(l[j])) n+=l[j++]; val=vars[+n]||0; i=j; }
+      else { let j=i, n=""; while(/[\d.]/.test(l[j])) n+=l[j++]; if(!n){ok=false;break;} val=parseFloat(n); i=j; }
+      if(neg) val=-val;
+      if(letra==="G") gs.push(val);
+      else if(letra==="M") ms.push(val);
+      else w[letra]=val;
+    }
+    if(!ok){ avisos.push("Linha ignorada: "+l); continue; }
+
+    let g53=false, defineCiclo=null;
+    gs.forEach(g=>{
+      if(g===0||g===1||g===2||g===3) motion=g;
+      else if(g===90) abs=true;
+      else if(g===91) abs=false;
+      else if(g===98) g98=true;
+      else if(g===99) g98=false;
+      else if(g===80) ciclo=null;
+      else if(g===81||g===82||g===83||g===73||g===85||g===86) defineCiclo=g;
+      else if(g===53) g53=true;
+      else if(g===51.1){ mirrorX = w.X!==undefined ? w.X : 0; }
+      else if(g===50.1){ mirrorX=null; }
+      /* G40/41/42, G43/44/49, G54-59, G17-19, G94/95: sem efeito no caminho */
+    });
+    if(ms.includes(30)||ms.includes(2)){ parado=true; }
+    if(g53) continue;                       // coordenadas de máquina: fora do preview
+
+    if(defineCiclo!==null){
+      ciclo={z:w.Z!==undefined?w.Z:pos.z, r:w.R!==undefined?w.R:pos.z};
+      zInicial=pos.z;
+    }
+    if(ciclo){
+      if(w.X!==undefined||w.Y!==undefined||defineCiclo!==null){
+        const xy=alvo({X:w.X,Y:w.Y});
+        const topo={x:xy.x,y:xy.y,z:pos.z};
+        seg(pos,topo,true);
+        const nR={x:xy.x,y:xy.y,z:ciclo.r};
+        const nZ={x:xy.x,y:xy.y,z:ciclo.z};
+        seg(topo,nR,true); seg(nR,nZ,false);
+        const volta={x:xy.x,y:xy.y,z: g98?zInicial:ciclo.r};
+        seg(nZ,volta,true);
+        pos=volta;
+      }
+      continue;
+    }
+
+    if(w.X!==undefined||w.Y!==undefined||w.Z!==undefined){
+      if(motion===2||motion===3){ arco(w, motion===2); }
+      else { const t=alvo(w); seg(pos,t,motion===0); pos=t; }
+    }
+  }
+  if(segs.length>=MAXS) avisos.push("Caminho truncado (programa muito longo para o preview).");
+  return {segs, avisos};
+}
+
+/* ---- grupo 3D das importações ---- */
+let impGroup=null;
+function refreshImports(){
+  if(!TEM3D) return;
+  if(!impGroup){ impGroup=new THREE.Group(); scene.add(impGroup); }
+  impGroup.children.slice().forEach(o=>{ impGroup.remove(o); o.geometry?.dispose(); o.material?.dispose(); });
+  IMPORTS.forEach(imp=>{
+    if(!imp.visivel || !imp.segs.length) return;
+    const feed=[], rapid=[];
+    imp.segs.forEach(s=>{
+      const arr = s.rapid ? rapid : feed;
+      arr.push(s.ax, s.az, -s.ay, s.bx, s.bz, -s.by);   // CNC → cena: (x, z, -y)
+    });
+    function linhas(arr,cor,op){
+      if(!arr.length) return;
+      const g=new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(arr,3));
+      impGroup.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({color:cor,transparent:true,opacity:op})));
+    }
+    linhas(rapid, 0x5a6572, 0.35);
+    linhas(feed,  imp.hex,  0.95);
+  });
+  draw();
+}
+
+function bboxImports(){
+  let r=0;
+  IMPORTS.forEach(imp=>{ if(!imp.visivel) return;
+    imp.segs.forEach(s=>{ r=Math.max(r,Math.abs(s.ax),Math.abs(s.ay),Math.abs(s.az),Math.abs(s.bx),Math.abs(s.by),Math.abs(s.bz)); });
+  });
+  return r;
+}
+
+$("importNC").addEventListener("click",()=>$("fileNC").click());
+$("fileNC").addEventListener("change",e=>{
+  const files=[...e.target.files]; if(!files.length) return;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const res=execNC(r.result);
+      if(!res.segs.length){ toast(`${f.name}: nenhum movimento encontrado`); return; }
+      IMPORTS.push({uid:UID++, nome:f.name.replace(/\.[^.]+$/,""), segs:res.segs,
+        visivel:true, hex:CORES_IMP[IMPORTS.length%CORES_IMP.length], avisos:res.avisos});
+      const R=bboxImports();
+      if(TEM3D && R>0){ cam.r=Math.max(cam.r, R*2.4); posCam(); }
+      refreshImports(); renderLegenda();
+      toast(`${f.name}: ${res.segs.length} movimentos no preview`);
+      res.avisos.slice(0,3).forEach(a=>console.warn("[importNC]",a));
+    };
+    r.readAsText(f);
+  });
+  e.target.value="";
+});
+
+/* ============================================================
+   EDITOR DE MACROS PERSONALIZADOS
+   ============================================================ */
+let EDITANDO=null;   // id do macro em edição (null = novo)
+let COR_SEL=0;
+
+function corPickRender(){
+  const el=$("m-cores"); el.innerHTML="";
+  CORES_FAM.forEach((c,i)=>{
+    const b=document.createElement("button");
+    b.style.setProperty("--c",c.css);
+    b.className = i===COR_SEL ? "on":"";
+    b.addEventListener("click",()=>{ COR_SEL=i; corPickRender(); });
+    el.appendChild(b);
+  });
+}
+function paramRow(p){
+  const div=document.createElement("div");
+  div.className="prow";
+  div.innerHTML=`
+    <input type="text" data-pk="k" value="${p.k||""}" placeholder="prof">
+    <input type="text" data-pk="l" value="${p.l||""}" placeholder="Profundidade">
+    <input type="number" data-pk="d" value="${p.d!==undefined?p.d:""}" placeholder="10">
+    <input type="number" data-pk="s" value="${p.s!==undefined?p.s:1}" step="0.1">
+    <input type="text" data-pk="u" value="${p.u||""}" placeholder="mm">
+    <button class="ib del" title="Remover">✕</button>`;
+  div.querySelector(".ib").addEventListener("click",()=>{ div.remove(); checarTokens(); });
+  $("m-params").appendChild(div);
+}
+function lerParams(){
+  return [...document.querySelectorAll("#m-params .prow")].map(r=>{
+    const g=k=>r.querySelector(`[data-pk="${k}"]`).value;
+    return {k:g("k").trim(), l:g("l").trim()||g("k").trim(), d:num(g("d"),0), s:num(g("s"),1)||1, u:g("u").trim()};
+  }).filter(p=>/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(p.k));
+}
+function checarTokens(){
+  const toks=tokensDoCodigo($("m-codigo").value);
+  const chaves=lerParams().map(p=>p.k);
+  const faltam=toks.filter(t=>!chaves.includes(t));
+  const sobram=chaves.filter(k=>!toks.includes(k));
+  let msg="";
+  if(faltam.length) msg+="⚠ Tokens no código sem parâmetro: {"+faltam.join("} {")+"}   ";
+  if(sobram.length) msg+="· Parâmetros sem uso no código: "+sobram.join(", ");
+  $("m-check").textContent=msg;
+}
+/* ---- painel de variáveis # ---- */
+let MVARS={};   // n -> {v, inc, passo, com}
+function varsDeclaradasNoCodigo(cod){
+  const decl=new Set();
+  cod.split(/\r?\n/).forEach(l=>{
+    l=l.trim().replace(/^N\d+/,"");
+    const m=l.match(/^#(\d+)=(.*)$/);
+    if(m && !m[2].includes("#"+m[1])) decl.add(+m[1]);
+  });
+  return decl;
+}
+function escanearVars(){
+  const cod=$("m-codigo").value;
+  const ns=new Set();
+  (cod.match(/#\d+/g)||[]).forEach(u=>ns.add(+u.slice(1)));
+  const decl=varsDeclaradasNoCodigo(cod);
+  ns.forEach(n=>{ if(!(n in MVARS)) MVARS[n]={v:"0", inc:false, passo:1, com:""}; });
+  Object.keys(MVARS).forEach(n=>{ if(!ns.has(+n)) delete MVARS[n]; });
+  const el=$("m-vars"); el.innerHTML="";
+  [...ns].sort((a,b)=>a-b).forEach(n=>{
+    const row=document.createElement("div");
+    if(decl.has(n)){
+      row.className="vrow ok";
+      row.innerHTML=`<b>#${n}</b><span class="vok">✓ declarada no código</span>`;
+    } else {
+      const v=MVARS[n];
+      row.className="vrow";
+      row.innerHTML=`<b>#${n}</b>
+        <input type="text" data-vn="${n}" data-vk="v" value="${v.v}" placeholder="0 ou {chave}" title="Valor inicial de #${n}">
+        <label class="chk"><input type="checkbox" data-vn="${n}" data-vk="inc"${v.inc?" checked":""}>incr.</label>
+        <input type="number" data-vn="${n}" data-vk="passo" value="${v.passo}" step="0.1"${v.inc?"":" disabled"} title="Passo do incremento">
+        <input type="text" data-vn="${n}" data-vk="com" value="${v.com}" placeholder="comentário" title="Comentário da declaração">
+        <button type="button" class="ib" data-vins="${n}"${v.inc?"":" disabled"} title="Inserir #${n}=#${n}+passo no cursor">＋</button>`;
+    }
+    el.appendChild(row);
+  });
+}
+$("m-vars").addEventListener("input",e=>{
+  const inp=e.target;
+  if(!inp.dataset || inp.dataset.vn===undefined) return;
+  const v=MVARS[+inp.dataset.vn]; if(!v) return;
+  const k=inp.dataset.vk;
+  if(k==="inc"){ v.inc=inp.checked; escanearVars(); }
+  else if(k==="passo") v.passo=num(inp.value,1);
+  else v[k]=inp.value;
+});
+$("m-vars").addEventListener("click",e=>{
+  const b=e.target.closest("[data-vins]");
+  if(!b) return;
+  const n=+b.dataset.vins, v=MVARS[n]; if(!v) return;
+  const ta=$("m-codigo");
+  const pos=ta.selectionStart!==undefined?ta.selectionStart:ta.value.length;
+  const linha=`#${n}=#${n}+${fnum(v.passo)}`;
+  const antes=ta.value.slice(0,pos), depois=ta.value.slice(pos);
+  const quebraA = antes.endsWith("\n")||antes==="" ? "" : "\n";
+  ta.value=antes+quebraA+linha+(depois.startsWith("\n")?"":"\n")+depois;
+  ta.dispatchEvent(new Event("input",{bubbles:true}));
+  toast(`#${n}=#${n}+${fnum(v.passo)} inserido`);
+});
+$("m-codigo").addEventListener("input",()=>{ checarTokens(); escanearVars(); });
+$("m-params").addEventListener("input",checarTokens);
+$("m-addparam").addEventListener("click",()=>{ paramRow({}); checarTokens(); });
+
+const CODIGO_MODELO =
+`(MEU MACRO)
+#23={cx}(CENTRO X)
+#24={cy}(CENTRO Y)
+#1={ap}(PASSO Z)
+#2=0(Z ATUAL)
+#4={prof}(PROFUNDIDADE)
+N10#2=#2+#1
+IF[#2GT#4]THEN#2=#4
+G0Z2.
+G0X[#23]Y[#24]
+G1Z-[#2]F{fz}
+(SEU CICLO AQUI)
+G0Z2.
+IF[#2LT#4]GOTO10`;
+
+function abrirEditor(id){
+  EDITANDO=id||null;
+  $("m-titulo").textContent = id ? "Editar macro" : "Cadastrar macro";
+  $("m-excluir").style.display = id ? "" : "none";
+  $("m-params").innerHTML="";
+  if(id){
+    const r=CUSTOM[id];
+    $("m-nome").value=r.nome; $("m-sub").value=r.sub||"";
+    COR_SEL=r.corIdx||0;
+    r.params.forEach(paramRow);
+    $("m-codigo").value=r.codigo;
+  } else {
+    $("m-nome").value=""; $("m-sub").value="";
+    COR_SEL=CUSTOM_SEQ % CORES_FAM.length;
+    [{k:"cx",l:"Centro X",d:0,s:1,u:"mm"},
+     {k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
+     {k:"ap",l:"Passo Z",d:1,s:0.1,u:"mm"},
+     {k:"prof",l:"Profundidade",d:10,s:0.5,u:"mm"},
+     {k:"fz",l:"F de mergulho",d:150,s:10,u:"mm/min"}].forEach(paramRow);
+    $("m-codigo").value=CODIGO_MODELO;
+  }
+  MVARS = (id && CUSTOM[id].vars) ? JSON.parse(JSON.stringify(CUSTOM[id].vars)) : {};
+  corPickRender(); checarTokens(); escanearVars();
+  $("modalMacro").classList.add("aberto");
+}
+function fecharEditor(){ $("modalMacro").classList.remove("aberto"); }
+
+$("novoMacro").addEventListener("click",()=>abrirEditor(null));
+$("m-cancelar").addEventListener("click",fecharEditor);
+$("modalMacro").addEventListener("click",e=>{ if(e.target.id==="modalMacro") fecharEditor(); });
+
+$("m-salvar").addEventListener("click",()=>{
+  const nome=$("m-nome").value.trim();
+  if(!nome){ toast("Dê um nome ao macro"); return; }
+  const codigo=$("m-codigo").value;
+  if(!codigo.trim()){ toast("O código está vazio"); return; }
+  const raw={nome, sub:$("m-sub").value.trim(), corIdx:COR_SEL, params:lerParams(), codigo, vars:JSON.parse(JSON.stringify(MVARS))};
+  const id = EDITANDO || ("cst"+(CUSTOM_SEQ++));
+  registrarCustom(id, raw);
+  if(EDITANDO){
+    SEQ.forEach(b=>{ if(b.tipo===id){
+      DEFS[id].params.forEach(f=>{ if(!(f.k in b.p)) b.p[f.k]=f.d; });
+    }});
+  }
+  fecharEditor(); renderPaleta(); renderPilha(); refresh();
+  toast(EDITANDO ? "Macro atualizado" : `Macro "${nome}" cadastrado`);
+  EDITANDO=null;
+});
+$("m-excluir").addEventListener("click",()=>{
+  if(!EDITANDO) return;
+  const n=SEQ.filter(b=>b.tipo===EDITANDO).length;
+  removerCustom(EDITANDO);
+  fecharEditor(); renderPaleta(); renderPilha(); refresh();
+  toast("Macro excluído"+(n?` (${n} bloco${n>1?"s":""} removido${n>1?"s":""} da pilha)`:""));
+  EDITANDO=null;
+});
+
+/* ============================================================
+   CALCULADORA DE PARÂMETROS DE CORTE (skill cnc-programming)
+   Vc (m/min) e fz (mm/dente) típicos por material — faixa média.
+   RPM = Vc*1000/(π*Ø)   ·   F = fz * z * RPM
+   ============================================================ */
+const MATERIAIS={
+  alu:  {nome:"Alumínio",           vc:220, fz:0.12},
+  acoB: {nome:"Aço baixo carbono",  vc:90,  fz:0.08},
+  acoM: {nome:"Aço médio carbono",  vc:60,  fz:0.06},
+  inox: {nome:"Aço inox",           vc:45,  fz:0.045},
+  fofo: {nome:"Ferro fundido",      vc:80,  fz:0.11},
+  latao:{nome:"Latão / bronze",     vc:150, fz:0.10},
+  plast:{nome:"Plástico / nylon",   vc:350, fz:0.15},
+};
+$("calcSF").addEventListener("click",()=>{
+  const m=MATERIAIS[$("g-mat").value];
+  const d=num($("g-cdiam").value,10);
+  const z=Math.max(1,num($("g-z").value,3));
+  if(d<=0){ toast("Informe o Ø da fresa"); return; }
+  const rpm=Math.round(m.vc*1000/(Math.PI*d));
+  const f=Math.round(m.fz*z*rpm/10)*10;
+  $("calcInfo").innerHTML=`${m.nome}: Vc ${m.vc} m/min · fz ${m.fz} mm/dente · z${z} · Ø${d} → <b>S ${rpm} rpm</b> · <b>F ${f} mm/min</b> · mergulho sugerido F${Math.round(f*0.4/10)*10}`;
+  const b=SEQ.find(x=>x.uid===SELECIONADO);
+  if(b){
+    b.p.ts=rpm; b.p.td=d;
+    renderPilha(); refresh();
+    toast(`S ${rpm} e Ø ${d} aplicados ao bloco selecionado`);
+  } else {
+    toast("Calculado — selecione um bloco para aplicar o S automaticamente");
+  }
+});
+
+/* ---------- config: qualquer alteração regera ---------- */
+["nome","seg","bx","by","bz"].forEach(k=>{
+  $("g-"+k).addEventListener("input",refreshDebounced);
+});
+$("g-g53").addEventListener("change",refreshDebounced);
+
+/* ---------- boot ---------- */
+init3D();
+renderPilha();
+refresh();
+</script>
+</body>
+</html>
