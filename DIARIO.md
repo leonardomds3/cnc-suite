@@ -77,6 +77,34 @@ Decisão já tomada sobre como começar:
 A regra de ouro continua: começar pelo que é simples e sólido, e só subir de nível
 quando o chão de fábrica pedir.
 
+### Próximo passo: construir o interpretador
+
+É **o passo mais complexo do projeto**. Fazer com calma e método completo — planejar,
+diff em arquivo separado, revisar juntos, testar no navegador. **Não é tarefa pra
+tocar pelo celular às pressas.** Esse aqui merece a bancada inteira.
+
+---
+
+## As três formas de criar estratégia
+
+Toda estratégia, não importa como nasce, passa pela **mesma engrenagem: o
+interpretador**. O que muda é só quanta liberdade o usuário quer. Da mais simples
+à mais livre:
+
+1. **Só números.** Pega uma receita-JSON pronta e troca as medidas (largura,
+   profundidade, avanço). O percurso continua o mesmo — muda o tamanho, não o caminho.
+2. **Ajustar o percurso ponto a ponto.** Edita o template do JSON — a sequência de
+   movimentos em si — ou monta um novo do zero. Aqui o usuário mexe no caminho, não
+   só nas medidas.
+3. **Colar um programa pronto e validado.** O usuário joga um G-code que já roda bem
+   na máquina e amarra os parâmetros dele às regras de interpretação. É o "cadastrar
+   macro" que já existe no `engine.js`, agora crescido e organizado.
+
+**Ponto-chave:** o interpretador é a **peça única** que une as três formas. A mesma
+engrenagem que lê a receita-JSON é a que lê o programa colado — não são três motores,
+é um só com três portas de entrada. A forma 3 é a **evolução do modal "cadastrar
+macro"** que já está no `engine.js`, não uma coisa nova jogada por cima.
+
 ---
 
 ## Decisões firmes e o que NÃO fazer
@@ -122,3 +150,18 @@ O arquivo `estrategias_canal.json` já contém a **matemática validada de dois 
 e serve de **formato de referência do interpretador** — é o molde de como um JSON de
 estratégia deve ser. **Preserve-o.** Não apague, não sobrescreva sem necessidade real;
 use como base e espelho ao construir o interpretador.
+
+### 5. O interpretador NÃO aprende — a biblioteca é que cresce
+
+O interpretador **executa a ficha, sempre igual**. Dar mais estratégias a ele **não**
+o deixa "mais esperto" — ele não ganha inteligência, só segue o JSON que recebe.
+
+O que cresce é a **biblioteca de estratégias validadas** do Leo. Cada estratégia que
+funciona vira um ativo: dá pra **reusar**, vira **conhecimento estruturado e buscável**,
+e mais tarde serve de **base para uma IA CONSULTAR** (não treinar).
+
+Não confundir os dois:
+
+- **"A biblioteca cresce"** → sim, é o objetivo.
+- **"O interpretador aprende sozinho"** → não. Isso seria treinar um modelo, e está
+  **fora do escopo**.
