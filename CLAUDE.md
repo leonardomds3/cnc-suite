@@ -1,58 +1,58 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar com o código deste repositório.
 
-## What this is
+## O que é isto
 
-Two standalone, single-file HTML applications for visually building Fanuc **Macro B** CNC milling G-code (UI text and code comments are in Portuguese). There is no build system, package manager, test suite, or server — each file is plain HTML/CSS/vanilla JS that runs by opening it directly in a browser.
+Duas aplicações HTML autônomas (single-file) para montar visualmente código G de usinagem no padrão Fanuc **Macro B** (a interface e os comentários do código estão em português). Não há build system, gerenciador de pacotes, suíte de testes nem servidor — cada arquivo é HTML/CSS/JS puro que roda abrindo direto no navegador.
 
-- `estudio_cnc.html` — mobile-first app with three tabs (PROJETO / 3D / CÓDIGO). The PROJETO tab has a 2D SVG canvas where operations ("blocos") are placed and dragged directly on a top-down view of the stock, plus an inspector panel for editing the selected block's parameters.
-- `montador_macro_cnc_2.html` — desktop-oriented two-column "Lego" builder. A palette of operation buttons appends blocks to an ordered list ("pilha"); each block expands into a form to edit its parameters. No 2D canvas.
+- `estudio_cnc.html` — app mobile-first com três abas (PROJETO / 3D / CÓDIGO). A aba PROJETO tem uma tela 2D em SVG onde as operações ("blocos") são posicionadas e arrastadas direto sobre uma vista de topo do bloco de material, além de um painel inspetor para editar os parâmetros do bloco selecionado.
+- `montador_macro_cnc_2.html` — construtor estilo "Lego" em duas colunas, voltado para desktop. Uma paleta de botões de operação adiciona blocos a uma lista ordenada ("pilha"); cada bloco expande em um formulário para editar seus parâmetros. Não tem tela 2D.
 
-Both files implement **the same machining engine independently** (block definitions, program assembly, G-code interpreter) — they are not modules sharing code, they are parallel copies with different UI shells. When fixing a bug in the shared machining logic (a `DEFS` entry, `gerarPrograma`, `execNC`, macro-token handling, etc.), check whether the same fix is needed in both files.
+Os dois arquivos implementam **o mesmo motor de usinagem de forma independente** (definições de blocos, montagem do programa, interpretador de G-code) — não são módulos compartilhados, e sim cópias paralelas com interfaces diferentes. Ao corrigir um bug na lógica de usinagem compartilhada (uma entrada de `DEFS`, `gerarPrograma`, `execNC`, tratamento de tokens de macro etc.), verifique se a mesma correção precisa ser aplicada nos dois arquivos.
 
-## Running / developing
+## Rodando / desenvolvendo
 
-There is no CLI. To test a change, just open the modified `.html` file in a browser (double-click, or drag into a browser tab). Both files load Three.js r128 and Google Fonts from CDNs at runtime — an internet connection is needed for the 3D preview and fonts; the app degrades gracefully without Three.js (`TEM3D` flag disables the 3D pane but code generation still works).
+Não há CLI. Para testar uma mudança, basta abrir o arquivo `.html` alterado no navegador (duplo clique, ou arrastar para uma aba do navegador). Os dois arquivos carregam o Three.js r128 e Google Fonts via CDN em tempo de execução — é preciso conexão com a internet para o preview 3D e as fontes; o app degrada graciosamente sem o Three.js (a flag `TEM3D` desativa o painel 3D, mas a geração de código continua funcionando).
 
-There is no automated test suite. Verify changes manually in the browser: add/edit blocks, check the generated code in the CÓDIGO/"Programa gerado" pane, and check the 3D preview updates.
+Não há suíte de testes automatizada. Verifique as mudanças manualmente no navegador: adicione/edite blocos, confira o código gerado no painel CÓDIGO/"Programa gerado" e confira se o preview 3D atualiza.
 
-## Core architecture (shared by both files)
+## Arquitetura principal (compartilhada pelos dois arquivos)
 
-### `DEFS` — the operation registry
-`DEFS` is an object keyed by operation id (`face`, `bolsaRet`, `bolsaCirc`, `bolsaCon`, `escariado`, `canal`, `canalR`, `furosL`, `furosC`, plus any user-registered custom macros). Each entry defines one machining operation type:
+### `DEFS` — o registro de operações
+`DEFS` é um objeto indexado pelo id da operação (`face`, `bolsaRet`, `bolsaCirc`, `bolsaCon`, `escariado`, `canal`, `canalR`, `furosL`, `furosC`, além de qualquer macro personalizada cadastrada pelo usuário). Cada entrada define um tipo de operação de usinagem:
 
 ```
 DEFS[id] = {
-  nome, sub, cor, hex,      // display name/subtitle/color for palette & 3D
-  params: [{k, l, d, s, u}] // key, label, default, step, unit (or sel:[...] / chk:true for dropdown/checkbox fields)
-  warn(p, c, d)             // p=block params, c=cfg() (material block/machine cfg), d=local tool diameter -> string[] of validation warnings
-  gerar(p, c, nb, d)        // returns string[] of G-code lines for this block; nb = this block's label offset
-  volume(p, c, d)           // returns a THREE.Mesh/Group approximating removed material, for the 3D preview
+  nome, sub, cor, hex,      // nome/subtítulo/cor exibidos na paleta e no 3D
+  params: [{k, l, d, s, u}] // chave, rótulo, padrão, passo, unidade (ou sel:[...] / chk:true para campos de dropdown/checkbox)
+  warn(p, c, d)             // p=parâmetros do bloco, c=cfg() (bloco de material/config da máquina), d=Ø da ferramenta local -> string[] de avisos de validação
+  gerar(p, c, nb, d)        // retorna string[] com as linhas de G-code deste bloco; nb = offset de rótulo deste bloco
+  volume(p, c, d)           // retorna um THREE.Mesh/Group que aproxima o material removido, para o preview 3D
 }
 ```
-`ORDEM` is the display order of the built-in ids in the palette.
+`ORDEM` define a ordem de exibição dos ids nativos na paleta.
 
-Adding a new built-in operation means adding an entry to `DEFS` and its id to `ORDEM`, in both HTML files if the operation should be available in both UIs.
+Adicionar uma nova operação nativa significa incluir uma entrada em `DEFS` e seu id em `ORDEM`, nos dois arquivos HTML caso a operação deva ficar disponível nas duas interfaces.
 
-### Custom user macros
-Users can paste raw Macro B code (with `{param}` placeholder tokens, plus the reserved `{DIAM}`/`{RF}` tokens for active tool diameter/radius) through a "Cadastrar macro" modal. `registrarCustom(id, raw)` wraps that raw definition into a normal `DEFS[id]` entry:
-- `warn`/`gerar` substitute `{tokens}` with parameter values and renumber any `N10`–`N99` labels and `GOTO` targets by the block's `nb` offset, so pasted macros never collide with other blocks.
-- Since custom macros have no hand-authored `volume()`, their 3D preview is produced by running the generated G-code through the `execNC` interpreter and rendering the resulting toolpath as line segments instead of a solid.
+### Macros personalizadas do usuário
+O usuário pode colar código Macro B bruto (com tokens `{parametro}`, além dos tokens reservados `{DIAM}`/`{RF}` para Ø/raio da ferramenta ativa) através do modal "Cadastrar macro". `registrarCustom(id, raw)` encapsula essa definição bruta em uma entrada `DEFS[id]` normal:
+- `warn`/`gerar` substituem os `{tokens}` pelos valores dos parâmetros e renumeram os rótulos `N10`–`N99` e os `GOTO` correspondentes pelo offset `nb` do bloco, para que macros coladas nunca colidam com outros blocos.
+- Como macros personalizadas não têm um `volume()` escrito à mão, seu preview 3D é produzido executando o G-code gerado através do interpretador `execNC` e desenhando o caminho de ferramenta resultante como segmentos de linha em vez de um sólido.
 
-### Program assembly — `gerarPrograma()`
-Walks the ordered block sequence (`SEQ`), and for each block:
-- Emits a tool change (`T`, `M6`, `G54`, `S...M3M8`, `G43`) only when the tool (`t`/`th`/`tdd`) actually differs from the previous block's tool — otherwise just updates `S` if only rotation changed.
-- Calls that block's `DEFS[...].gerar(p, c, nb, d)` with `nb = (index+1)*100`, so each block's `N` labels live in their own hundred-range (block 1 uses N110/N120/…, block 2 uses N210/N220/…) and never collide.
-- Reuses a fixed set of macro variables across blocks (documented in a comment above `DEFS` in `estudio_cnc.html` around line 394): `#1` step Z, `#2` current Z, `#4` depth, `#5`/`#6` useful half-dimensions, `#12` lateral stepover, `#13` direction, `#15` counter/offset, `#23`/`#24` center X/Y, `#26` global safety Z, `#30`/`#31` hole position. Keep this convention in mind when editing or adding `gerar()` bodies — these numbers are relied on to not collide within a single block's own code.
+### Montagem do programa — `gerarPrograma()`
+Percorre a sequência ordenada de blocos (`SEQ`) e, para cada bloco:
+- Só emite troca de ferramenta (`T`, `M6`, `G54`, `S...M3M8`, `G43`) quando a ferramenta (`t`/`th`/`tdd`) realmente muda em relação ao bloco anterior — caso contrário, atualiza só o `S` se apenas a rotação mudou.
+- Chama o `DEFS[...].gerar(p, c, nb, d)` daquele bloco com `nb = (índice+1)*100`, de forma que os rótulos `N` de cada bloco vivem na sua própria centena (bloco 1 usa N110/N120/…, bloco 2 usa N210/N220/…) e nunca colidem.
+- Reaproveita um conjunto fixo de variáveis de macro entre os blocos (documentado em um comentário acima de `DEFS` em `estudio_cnc.html`, por volta da linha 394): `#1` passo Z, `#2` Z atual, `#4` profundidade, `#5`/`#6` meias-medidas úteis, `#12` passe lateral, `#13` direção, `#15` contador/offset, `#23`/`#24` centro X/Y, `#26` Z de segurança global, `#30`/`#31` posição do furo. Tenha essa convenção em mente ao editar ou criar corpos de `gerar()` — esses números dependem de não colidir dentro do próprio código de um bloco.
 
-Zero/reference convention used throughout: **X0/Y0 at the center of the stock, Z0 at the top face**.
+Convenção de zero/referência usada em todo o código: **X0/Y0 no centro do bloco de material, Z0 na face superior**.
 
-### Validation — `coletarWarns()`
-Collects each block's own `warn()` output plus a few cross-cutting rules (e.g. Z step-down > 1.5× tool diameter, plunge feed > ~50% of cut feed). Warnings are advisory only — they don't block code generation.
+### Validação — `coletarWarns()`
+Reúne os avisos do `warn()` de cada bloco mais algumas regras gerais (ex.: passo Z acima de 1,5× o Ø da ferramenta, avanço de mergulho acima de ~50% do avanço de corte). Os avisos são apenas informativos — não bloqueiam a geração do código.
 
-### `execNC(texto)` — the embedded G-code interpreter
-A small Fanuc/Macro B simulator that parses a G-code string (strips comments/labels, evaluates `#`-variable expressions and `IF/GOTO`) and returns motion segments (`{ax,ay,az,bx,by,bz,rapid}`) for 3D preview. It's used for two things: rendering the toolpath of custom-macro blocks (see above), and the "Importar .NC no preview" feature that lets a user load an external `.NC` file and see its toolpath overlaid in the 3D view.
+### `execNC(texto)` — o interpretador de G-code embutido
+Um pequeno simulador de Fanuc/Macro B que analisa uma string de G-code (remove comentários/rótulos, avalia expressões com variáveis `#` e `IF/GOTO`) e retorna segmentos de movimento (`{ax,ay,az,bx,by,bz,rapid}`) para o preview 3D. É usado em duas situações: para desenhar o caminho de ferramenta de blocos de macro personalizada (ver acima) e na função "Importar .NC no preview", que permite carregar um arquivo `.NC` externo e ver seu caminho de ferramenta sobreposto na vista 3D.
 
-### Persistence
-No backend and no `localStorage` — "Salvar projeto"/"Salvar montagem" serializes `{cfg, seq: SEQ, custom: CUSTOM}` to a downloaded `.json` file; "Abrir" re-hydrates state from an uploaded `.json` file. The generated G-code itself is exported via "Baixar .NC" as a plain text download.
+### Persistência
+Sem backend e sem `localStorage` — "Salvar projeto"/"Salvar montagem" serializa `{cfg, seq: SEQ, custom: CUSTOM}` em um arquivo `.json` baixado; "Abrir" recarrega o estado a partir de um arquivo `.json` enviado. O G-code gerado em si é exportado via "Baixar .NC" como um download de texto simples.
