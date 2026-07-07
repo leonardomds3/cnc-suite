@@ -4,12 +4,11 @@ Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar com o código d
 
 ## O que é isto
 
-Duas aplicações HTML autônomas (single-file) para montar visualmente código G de usinagem no padrão Fanuc **Macro B** (a interface e os comentários do código estão em português). Não há build system, gerenciador de pacotes, suíte de testes nem servidor — cada arquivo é HTML/CSS/JS puro que roda abrindo direto no navegador.
+Duas aplicações HTML para montar visualmente código G de usinagem no padrão Fanuc **Macro B** (a interface e os comentários do código estão em português). Não há build system, gerenciador de pacotes, suíte de testes nem servidor — é HTML/CSS/JS puro que roda abrindo direto no navegador.
 
 - `estudio_cnc.html` — app mobile-first com três abas (PROJETO / 3D / CÓDIGO). A aba PROJETO tem uma tela 2D em SVG onde as operações ("blocos") são posicionadas e arrastadas direto sobre uma vista de topo do bloco de material, além de um painel inspetor para editar os parâmetros do bloco selecionado.
 - `montador_macro_cnc_2.html` — construtor estilo "Lego" em duas colunas, voltado para desktop. Uma paleta de botões de operação adiciona blocos a uma lista ordenada ("pilha"); cada bloco expande em um formulário para editar seus parâmetros. Não tem tela 2D.
-
-Os dois arquivos implementam **o mesmo motor de usinagem de forma independente** (definições de blocos, montagem do programa, interpretador de G-code) — não são módulos compartilhados, e sim cópias paralelas com interfaces diferentes. Ao corrigir um bug na lógica de usinagem compartilhada (uma entrada de `DEFS`, `gerarPrograma`, `execNC`, tratamento de tokens de macro etc.), verifique se a mesma correção precisa ser aplicada nos dois arquivos.
+- `engine.js` — **o motor de usinagem compartilhado** (definições de blocos `DEFS`/`ORDEM`, montagem do programa `gerarPrograma`, interpretador de G-code `execNC`, macros personalizadas). Antes esse código era copiado dentro de cada HTML; hoje mora num arquivo só, carregado pelos dois via `<script src="engine.js"></script>`. **Uma correção na lógica de usinagem agora vale para os dois apps de uma vez** — não é mais preciso duplicar a mudança. Os HTML ficam só com a interface (SVG, formulários, abas) e o setup do Three.js.
 
 ## Rodando / desenvolvendo
 
@@ -17,7 +16,7 @@ Não há CLI. Para testar uma mudança, basta abrir o arquivo `.html` alterado n
 
 Não há suíte de testes automatizada. Verifique as mudanças manualmente no navegador: adicione/edite blocos, confira o código gerado no painel CÓDIGO/"Programa gerado" e confira se o preview 3D atualiza.
 
-## Arquitetura principal (compartilhada pelos dois arquivos)
+## Arquitetura principal (implementada em `engine.js`)
 
 ### `DEFS` — o registro de operações
 `DEFS` é um objeto indexado pelo id da operação (`face`, `bolsaRet`, `bolsaCirc`, `bolsaCon`, `escariado`, `canal`, `canalR`, `furosL`, `furosC`, além de qualquer macro personalizada cadastrada pelo usuário). Cada entrada define um tipo de operação de usinagem:
