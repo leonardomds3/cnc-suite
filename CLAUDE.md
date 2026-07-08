@@ -39,6 +39,11 @@ O usuário pode colar código Macro B bruto (com tokens `{parametro}`, além dos
 - `warn`/`gerar` substituem os `{tokens}` pelos valores dos parâmetros e renumeram os rótulos `N10`–`N99` e os `GOTO` correspondentes pelo offset `nb` do bloco, para que macros coladas nunca colidam com outros blocos.
 - Como macros personalizadas não têm um `volume()` escrito à mão, seu preview 3D é produzido executando o G-code gerado através do interpretador `execNC` e desenhando o caminho de ferramenta resultante como segmentos de linha em vez de um sólido.
 
+### Estratégias em JSON — o interpretador
+Estratégias de usinagem são **dados** (fichas JSON), nunca código fixo em JS. `interpretarEstrategia(est, p, c, nb, d)` executa a ficha em 5 passos: lê os inputs → calcula as derivadas na ordem declarada → avalia os avisos (informativos, nunca bloqueiam) → resolve os placeholders `{chave}` do template com `fnum()` → emite as linhas. `avaliarExpr(expr, ctx)` avalia as expressões das fichas (aritmética + comparadores) por descida recursiva, sem `eval()`. `registrarEstrategia(id, est)` embrulha a ficha numa entrada `DEFS[id]` normal (registro global `ESTRATEGIAS`, espelho do papel de `CUSTOM`), com preview 3D desenhado via `execNC` como nas macros personalizadas.
+
+**Regra fonte-da-verdade:** `estrategias_canal.json` é a FONTE DA VERDADE das estratégias e o formato de referência do interpretador — preserve-o. O `estrategias.js` (quando existir; carregado pelos HTMLs via `<script>` porque `fetch` de `.json` falha em `file://`) é **derivado** dele, com o mesmo conteúdo. Quando o `.json` mudar, o `.js` precisa ser **regenerado a partir do `.json`** — nunca editar os dois em paralelo à mão. Futuramente essa regeneração deve virar um passo de build automático.
+
 ### Montagem do programa — `gerarPrograma()`
 Percorre a sequência ordenada de blocos (`SEQ`) e, para cada bloco:
 - Só emite troca de ferramenta (`T`, `M6`, `G54`, `S...M3M8`, `G43`) quando a ferramenta (`t`/`th`/`tdd`) realmente muda em relação ao bloco anterior — caso contrário, atualiza só o `S` se apenas a rotação mudou.
