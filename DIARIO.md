@@ -39,9 +39,19 @@ E o jeito de conversar com o Leo:
   carregado pelos dois via `<script src="engine.js">`.
 - **Correção do bug da div duplicada** do modal `#modalMacro` no estúdio.
 - **Trabalho remoto ligado** (remote-control), pra tocar o projeto à distância.
+- **Parte 1 do interpretador de estratégias** no `engine.js`: `avaliarExpr`
+  (expressões das fichas, sem eval), `interpretarEstrategia` (os 5 passos),
+  `registrarEstrategia`/`removerEstrategia` + registro `ESTRATEGIAS`. CLAUDE.md
+  ganhou a seção do interpretador e a regra fonte-da-verdade (o `.json` manda;
+  o `estrategias.js` é derivado e regenerado a partir dele, nunca editado em
+  paralelo — futuramente um passo de build automático).
 
 Commits até aqui (do mais recente pro mais antigo):
 
+- `cdd942f` — Adiciona o interpretador de estrategias (fichas JSON) ao engine.js
+- `ac260c7` — Registra as três formas de criar estratégia e a decisão de que o interpretador não aprende
+- `2324a8f` — Registra decisões firmes da estratégia por interpretador e adiciona estrategias_canal.json
+- `bcd7fa8` — Adiciona DIARIO.md de continuidade e atualiza CLAUDE.md para o engine.js compartilhado
 - `6923fd7` — Extrai o motor de usinagem duplicado de montador_macro_cnc_2.html para engine.js
 - `d07b49d` — Extrai o motor de usinagem para engine.js e corrige modal de macro
 - `b127cd7` — Adiciona as duas aplicações CNC (Estúdio CNC e Montador Macro)
@@ -52,9 +62,10 @@ Commits até aqui (do mais recente pro mais antigo):
 
 ## Onde paramos
 
-Motor unificado em `engine.js` e **funcionando** nos dois apps. Remoto ligado.
-Árvore de trabalho limpa — **nada pendente de commit**. Base arrumada, pronta pro
-próximo passo grande.
+Parte 1 do interpretador **feita e commitada** (`cdd942f`): as engrenagens estão
+no `engine.js`, mas ainda **ninguém as chama** — nenhum HTML carrega estratégia,
+nenhum teste no navegador foi possível ainda. É motor na bancada, montado mas
+sem correia ligada. Árvore de trabalho limpa.
 
 ---
 
@@ -77,11 +88,23 @@ Decisão já tomada sobre como começar:
 A regra de ouro continua: começar pelo que é simples e sólido, e só subir de nível
 quando o chão de fábrica pedir.
 
-### Próximo passo: construir o interpretador
+### Próximo passo: ligar a correia — `estrategias.js` + HTMLs
 
-É **o passo mais complexo do projeto**. Fazer com calma e método completo — planejar,
-diff em arquivo separado, revisar juntos, testar no navegador. **Não é tarefa pra
-tocar pelo celular às pressas.** Esse aqui merece a bancada inteira.
+Parte 2 do interpretador:
+
+1. **Gerar `estrategias.js` a partir do `estrategias_canal.json`** (uma linha de
+   cabeçalho + o conteúdo do JSON, igual). Lembrete da regra: o `.json` é a fonte
+   da verdade; o `.js` é derivado — quando o `.json` mudar, regenerar o `.js`.
+2. **Ligar nos dois HTMLs**: carregar `estrategias.js` via `<script>`, registrar
+   as fichas no boot e incluir `ESTRATEGIAS` na paleta (uma linha no
+   `renderPaleta` de cada app).
+3. **Primeiro teste real no navegador** — é aqui que o interpretador roda de
+   verdade pela primeira vez: adicionar os dois canais, conferir o código gerado
+   contra a matemática do JSON, rótulos N por centena com 2+ blocos, avisos
+   disparando e preview 3D desenhando o caminho.
+
+Método completo, como sempre: diff em arquivo separado, revisar juntos, testar
+antes de commitar. **Não é tarefa pra tocar pelo celular às pressas.**
 
 ---
 
