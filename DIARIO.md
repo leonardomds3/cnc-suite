@@ -45,9 +45,20 @@ E o jeito de conversar com o Leo:
   ganhou a seção do interpretador e a regra fonte-da-verdade (o `.json` manda;
   o `estrategias.js` é derivado e regenerado a partir dele, nunca editado em
   paralelo — futuramente um passo de build automático).
+- **Parte 2 do interpretador**: `estrategias.js` derivado do
+  `estrategias_canal.json` (cabeçalho + JSON integral + rodapé de registro),
+  ligado nos dois HTMLs (`<script>` após o engine.js e `ESTRATEGIAS` na paleta).
+- **Testado e aprovado no navegador nos dois apps**, inclusive por duplo clique
+  (file://): canais aparecem na paleta, matemática do G-code confere
+  (`#5=(larg-diam)/2`), rótulos N por centena sem colisão, avisos na lista
+  amarela sem bloquear, preview 3D desenha o caminho.
+- **MARCO: o interpretador funciona de ponta a ponta.** Estratégia nova =
+  escrever JSON, sem tocar no motor. O objetivo original do projeto está de pé.
 
 Commits até aqui (do mais recente pro mais antigo):
 
+- `7b78d40` — Liga o interpretador nos dois apps: estrategias.js derivado do JSON + paleta
+- `8013a6d` — Atualiza o DIARIO.md: parte 1 do interpretador feita, proximo passo e ligar nos HTMLs
 - `cdd942f` — Adiciona o interpretador de estrategias (fichas JSON) ao engine.js
 - `ac260c7` — Registra as três formas de criar estratégia e a decisão de que o interpretador não aprende
 - `2324a8f` — Registra decisões firmes da estratégia por interpretador e adiciona estrategias_canal.json
@@ -62,10 +73,10 @@ Commits até aqui (do mais recente pro mais antigo):
 
 ## Onde paramos
 
-Parte 1 do interpretador **feita e commitada** (`cdd942f`): as engrenagens estão
-no `engine.js`, mas ainda **ninguém as chama** — nenhum HTML carrega estratégia,
-nenhum teste no navegador foi possível ainda. É motor na bancada, montado mas
-sem correia ligada. Árvore de trabalho limpa.
+O interpretador roda de ponta a ponta nos dois apps — parte 1 (`cdd942f`) e
+parte 2 (`7b78d40`) commitadas, testadas no navegador e aprovadas, inclusive
+por duplo clique. A correia está ligada: estratégia nova é escrever JSON, sem
+tocar no motor. Árvore de trabalho limpa.
 
 ---
 
@@ -88,23 +99,43 @@ Decisão já tomada sobre como começar:
 A regra de ouro continua: começar pelo que é simples e sólido, e só subir de nível
 quando o chão de fábrica pedir.
 
-### Próximo passo: ligar a correia — `estrategias.js` + HTMLs
+### Nova direção: converter as operações antigas em fichas JSON
 
-Parte 2 do interpretador:
+O Leo quer que as operações nativas antigas (bolsa cônica, bolsa retangular,
+escariado etc.) também virem estratégia-JSON editável, pra melhorar o percurso
+delas sem mexer no motor.
 
-1. **Gerar `estrategias.js` a partir do `estrategias_canal.json`** (uma linha de
-   cabeçalho + o conteúdo do JSON, igual). Lembrete da regra: o `.json` é a fonte
-   da verdade; o `.js` é derivado — quando o `.json` mudar, regenerar o `.js`.
-2. **Ligar nos dois HTMLs**: carregar `estrategias.js` via `<script>`, registrar
-   as fichas no boot e incluir `ESTRATEGIAS` na paleta (uma linha no
-   `renderPaleta` de cada app).
-3. **Primeiro teste real no navegador** — é aqui que o interpretador roda de
-   verdade pela primeira vez: adicionar os dois canais, conferir o código gerado
-   contra a matemática do JSON, rótulos N por centena com 2+ blocos, avisos
-   disparando e preview 3D desenhando o caminho.
+**Fluxo de conversão acordado:**
 
-Método completo, como sempre: diff em arquivo separado, revisar juntos, testar
-antes de commitar. **Não é tarefa pra tocar pelo celular às pressas.**
+1. O Leo pega o programa existente da operação.
+2. Comenta tudo entre parênteses e marca as linhas que importam.
+3. Escreve uma nota de cabeçalho com a filosofia da operação.
+4. O Claude (via Claude Code) lê o programa anotado e monta a ficha JSON,
+   deixando editável exatamente o que o Leo marcou — sem chutar nada.
+5. As notas ficam salvas como banco de conhecimento e referência pra criar
+   operações futuras. Esse acervo é um ativo — o "segundo cérebro".
+
+**Padrão de anotação (versão 1 — pode evoluir; se o Leo mandar mudança, a nova
+vira base):**
+
+- **Camada 1 — NOTA no cabeçalho da operação**, campos fixos:
+  `(=== OPERACAO: nome ===)`, `(PROPOSITO:)`, `(CRITICO:)`, `(EDITAVEL:)`,
+  `(FIXO:)`, `(CUIDADOS:)`
+- **Camada 2 — MARCAS no fim das linhas que importam**, três marcas apenas:
+  - `@ED` = editável (vira campo de input)
+  - `@FX` = fixo (trava, não vira campo)
+  - `@CR` = crítico (lógica não pode ser tocada)
+  - Linha sem marca = mantida como está.
+
+---
+
+## Pendências (não urgentes)
+
+- Tela 2D do estúdio: blocos de estratégia aparecem como marcador genérico,
+  sem contorno — melhoria visual futura.
+- GitHub / push não configurado: todos os commits são locais.
+- Próximos passos possíveis: botão "Importar estratégias .json" (FileReader);
+  automatizar a regeneração do `estrategias.js` a partir do `.json`.
 
 ---
 
@@ -188,3 +219,11 @@ Não confundir os dois:
 - **"A biblioteca cresce"** → sim, é o objetivo.
 - **"O interpretador aprende sozinho"** → não. Isso seria treinar um modelo, e está
   **fora do escopo**.
+
+### 6. Conversão de operação antiga é UMA A UMA, guiada pelas anotações do Leo
+
+REJEITADA a ideia de uma "inteligência que adivinha sozinha o que é editável".
+Adivinhar exige o julgamento de chão de fábrica do Leo; automatizar isso
+terceirizaria a parte mais valiosa do processo e geraria fichas que precisariam
+ser revisadas uma a uma de qualquer forma — com risco de erro escondido.
+**O julgamento é do Leo; a tradução para JSON é do Claude.**
