@@ -402,6 +402,7 @@
   </div>
 </div>
 <script src="engine.js"></script>
+<script src="estrategias.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -421,7 +422,7 @@ function toast(t){ const el=$("toast"); el.textContent=t; el.classList.add("show
 function renderPaleta(){
   const el=$("paleta");
   el.innerHTML="";
-  ORDEM.concat(Object.keys(CUSTOM)).forEach(t=>{
+  ORDEM.concat(Object.keys(ESTRATEGIAS), Object.keys(CUSTOM)).forEach(t=>{
     const D=DEFS[t];
     if(!D) return;
     const b=document.createElement("button");

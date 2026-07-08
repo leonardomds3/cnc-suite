@@ -352,6 +352,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="engine.js"></script>
+<script src="estrategias.js"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -804,7 +805,7 @@ function addBloco(tipo){
 /* ---------- paleta (chips no topo) ---------- */
 function renderPaleta(){
   const el=$("palbar"); el.innerHTML="";
-  ORDEM.concat(Object.keys(CUSTOM)).forEach(t=>{
+  ORDEM.concat(Object.keys(ESTRATEGIAS), Object.keys(CUSTOM)).forEach(t=>{
     const D=DEFS[t]; if(!D) return;
     const custom=!!CUSTOM[t];
     const b=document.createElement("button");
