@@ -54,6 +54,24 @@ E o jeito de conversar com o Leo:
   amarela sem bloquear, preview 3D desenha o caminho.
 - **MARCO: o interpretador funciona de ponta a ponta.** Estratégia nova =
   escrever JSON, sem tocar no motor. O objetivo original do projeto está de pé.
+- **Decisão de organização: um arquivo por família.** As estratégias vivem em
+  um `.json` por família (`estrategias_canal.json`, `estrategias_escareado.json`,
+  ...). O `estrategias.js` derivado passou a ser a **junção** das estratégias de
+  todos os arquivos de família — continua sendo o único carregado pelos HTMLs,
+  nada mudou neles. A receita de regeneração está no cabeçalho do próprio
+  `estrategias.js`.
+- **Primeira conversão pelo método novo: o escareado helicoidal.** O Leo anotou
+  o programa com `@ED`/`@FX`/`@CR`, o Claude traduziu pra ficha
+  `estrategias_escareado.json`. Pontos da conversão: `#5` virou derivada
+  automática `(furoDiam - diam)/2` com o Ø da ferramenta ativa; a origem soma
+  **no movimento** (`X[#6+#23]`), nunca no diâmetro; o `I` do `G3` ficou `-[#6]`
+  (incremental, sem origem); cabeçalho/rodapé adaptados ao padrão do
+  interpretador (rótulos `{nb}`, `#26` global); na revisão o Leo pediu o avanço
+  como input (`F[#10]` com `#10={f}`), como nas fichas de canal. O padrão de
+  anotação estreou e funcionou.
+- **O acervo começou:** o `.NC` anotado original está guardado em
+  `programas_anotados/escareado_helicoidal.NC`. As anotações do Leo são o banco
+  de conhecimento — não podem se perder.
 
 Commits até aqui (do mais recente pro mais antigo):
 
@@ -73,10 +91,12 @@ Commits até aqui (do mais recente pro mais antigo):
 
 ## Onde paramos
 
-O interpretador roda de ponta a ponta nos dois apps — parte 1 (`cdd942f`) e
-parte 2 (`7b78d40`) commitadas, testadas no navegador e aprovadas, inclusive
-por duplo clique. A correia está ligada: estratégia nova é escrever JSON, sem
-tocar no motor. Árvore de trabalho limpa.
+O escareado helicoidal foi convertido pelo método novo (anotação → ficha) e o
+`estrategias.js` foi regenerado com as duas famílias (canal + escareado).
+Arquivos na árvore, **ainda sem commit**: falta o teste no navegador nos dois
+apps — escareado na paleta, matemática do `#5=(furoDiam-diam)/2` com a
+ferramenta ativa, hélice no preview 3D — e só depois commitar, como manda o
+método.
 
 ---
 

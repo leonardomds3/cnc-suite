@@ -1,11 +1,17 @@
 "use strict";
 /* ============================================================
    ESTRATEGIAS.JS — ARQUIVO DERIVADO, NAO EDITE A MAO
-   Fonte da verdade: estrategias_canal.json. Este arquivo e o
-   mesmo JSON embrulhado em script classico, porque fetch() de
-   .json falha em file:// e os apps abrem por duplo clique.
-   Quando o .json mudar, regenere este arquivo: cabecalho (ate
-   a linha do "=") + conteudo integral do .json + rodape.
+   Fonte da verdade: os arquivos de familia estrategias_*.json
+   (um por familia: estrategias_canal.json,
+   estrategias_escareado.json, ...). Este arquivo e a UNIAO das
+   estrategias de todos eles, embrulhada em script classico,
+   porque fetch() de .json falha em file:// e os apps abrem por
+   duplo clique.
+   Quando qualquer .json de familia mudar, regenere este arquivo:
+   cabecalho (ate a linha do "=") + objeto com "versao", "motor"
+   (identico em todos os .json) e "estrategias" = uniao das
+   estrategias de todos os arquivos de familia, na ordem canal,
+   escareado, ... + rodape de registro.
    Futuramente isso vira um passo de build automatico.
    ============================================================ */
 const ESTRATEGIAS_PADRAO =
@@ -131,6 +137,51 @@ const ESTRATEGIAS_PADRAO =
         "#13=0-#13",
         "IF[#2LT#4]GOTO{nb+10}",
         "G0Z[#26]"
+      ]
+    },
+    "escareadoHelicoidal": {
+      "nome": "Escareado helicoidal",
+      "familia": "escareado",
+      "cor": "#6fe0ac",
+      "descricao": "Escareado com angulo e diametro quaisquer, para quando nao ha ferramenta especifica. Interpolacao helicoidal G3: a cada volta o Z desce um incremento e o raio de trabalho encolhe TAN do angulo, formando o cone. Convertido do programa anotado do Leo (programas_anotados/escareado_helicoidal.NC).",
+      "inputs": [
+        { "k": "furoDiam", "l": "Diametro inicial do escareado", "d": 40,   "s": 0.5,  "u": "mm" },
+        { "k": "ang",      "l": "Angulo com o eixo Z",           "d": 66.8, "s": 0.1,  "u": "graus" },
+        { "k": "prof",     "l": "Profundidade final",            "d": 6,    "s": 0.1,  "u": "mm" },
+        { "k": "ap",       "l": "Incremento Z (ap)",             "d": 0.1,  "s": 0.05, "u": "mm" },
+        { "k": "zIni",     "l": "Z inicial",                     "d": 0,    "s": 0.1,  "u": "mm" },
+        { "k": "f",        "l": "Avanco",                        "d": 800,  "s": 50,   "u": "mm/min" },
+        { "k": "cx",       "l": "Centro X (origem)",             "d": 0,    "s": 1,    "u": "mm" },
+        { "k": "cy",       "l": "Centro Y (origem)",             "d": 0,    "s": 1,    "u": "mm" }
+      ],
+      "derivadas": {
+        "rt": "(furoDiam - diam)/2"
+      },
+      "avisos": [
+        { "se": "furoDiam <= diam", "msg": "DIAMETRO DO ESCAREADO MENOR OU IGUAL AO DIAMETRO DA FERRAMENTA" },
+        { "se": "ang >= 90",        "msg": "ANGULO DEVE SER MENOR QUE 90 GRAUS" },
+        { "se": "ang <= 0",         "msg": "ANGULO DEVE SER MAIOR QUE 0 GRAUS" },
+        { "se": "zIni >= prof",     "msg": "Z INICIAL MAIOR OU IGUAL A PROFUNDIDADE FINAL - NADA A USINAR" }
+      ],
+      "template": [
+        "#23={cx}(CENTRO X)",
+        "#24={cy}(CENTRO Y)",
+        "#1={ap}(INCREMENTO Z)",
+        "#2={zIni}(Z INICIAL)",
+        "#7={ang}(ANGULO COM O EIXO Z)",
+        "#4={prof}(PROFUNDIDADE FINAL)",
+        "#5={rt}(RAIO DE TRABALHO = [FURO-FERRAMENTA]/2)",
+        "#10={f}(AVANCO)",
+        "G0X[#23]Y[#24]",
+        "G0Z0.",
+        "N{nb+10}#2=#2+#1",
+        "#3=#2*TAN[#7]",
+        "#6=#5-#3(RAIO NESTE PASSE)",
+        "IF[#2GT#4]GOTO{nb+20}",
+        "G1X[#6+#23]F[#10]",
+        "G3I-[#6]J0Z-[#2]",
+        "GOTO{nb+10}",
+        "N{nb+20}G0Z[#26]"
       ]
     }
   }
