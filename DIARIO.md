@@ -153,7 +153,6 @@ vira base):**
 
 - Tela 2D do estúdio: blocos de estratégia aparecem como marcador genérico,
   sem contorno — melhoria visual futura.
-- GitHub / push não configurado: todos os commits são locais.
 - Próximos passos possíveis: botão "Importar estratégias .json" (FileReader);
   automatizar a regeneração do `estrategias.js` a partir do `.json`.
 
