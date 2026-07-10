@@ -420,9 +420,14 @@ function removerCustom(id){
 let ESTRATEGIAS = {};
 
 /* Avaliador das expressões das fichas: aritmética com os nomes
-   do contexto (inputs/derivadas/diam/nb) e comparadores para os
-   avisos. Sem eval() — JSON editável pelo usuário não pode virar
-   JS executável. Mesma descida recursiva do evalExpr do execNC. */
+   do contexto (inputs/derivadas/diam/nb), comparadores para os
+   avisos e as funções TAN()/ATAN() em GRAUS (mesma convenção do
+   FN do execNC). Sem eval() — JSON editável pelo usuário não pode
+   virar JS executável. Mesma descida recursiva do evalExpr do execNC. */
+const FN_FICHA={
+  TAN:x=>Math.tan(x*Math.PI/180),
+  ATAN:x=>Math.atan(x)*180/Math.PI,
+};
 function avaliarExpr(expr, ctx){
   const s=String(expr).replace(/\s+/g,"");
   let p=0;
@@ -431,6 +436,11 @@ function avaliarExpr(expr, ctx){
     if(/[\d.]/.test(s[p]||"")){ let n=""; while(/[\d.]/.test(s[p]||"")) n+=s[p++];
       const v=parseFloat(n); if(isNaN(v)) throw new Error(`número inválido em "${expr}"`); return v; }
     if(/[a-zA-Z_]/.test(s[p]||"")){ let n=""; while(/[a-zA-Z0-9_]/.test(s[p]||"")) n+=s[p++];
+      if(s[p]==="("){
+        if(!FN_FICHA[n]) throw new Error(`função desconhecida "${n}" em "${expr}"`);
+        p++; const v=soma(); if(s[p]!==")") throw new Error(`falta ")" em "${n}(...)" de "${expr}"`); p++;
+        return FN_FICHA[n](v);
+      }
       if(!(n in ctx)) throw new Error(`nome desconhecido "${n}" em "${expr}"`);
       return ctx[n]; }
     throw new Error(`símbolo inesperado "${s[p]||"(fim)"}" em "${expr}"`);
@@ -456,22 +466,33 @@ function avaliarExpr(expr, ctx){
   return v;
 }
 
-/* Executa a ficha e devolve {linhas, avisos}. Erro de ficha
-   (nome errado, expressão malformada) vira aviso e a linha
-   mantém o placeholder — nunca derruba a geração. */
+/* Executa a ficha e devolve {linhas, avisos, ctx}. O ctx (inputs +
+   derivadas resolvidas) alimenta os campos exibidos ("saidas") nos
+   apps. Erro de ficha (nome errado, expressão malformada) vira
+   aviso e a linha mantém o placeholder — nunca derruba a geração. */
 function interpretarEstrategia(est, p, c, nb, d){
   const avisos=[];
   /* 1. inputs */
   const ctx={diam:d, nb:nb};
-  (est.inputs||[]).forEach(inp=>{ ctx[inp.k]= p[inp.k]!==undefined ? p[inp.k] : inp.d; });
-  /* 2. derivadas, na ordem declarada no JSON */
+  (est.inputs||[]).forEach(inp=>{
+    let v = p[inp.k]!==undefined ? p[inp.k] : inp.d;
+    /* seletor: o <select> dos apps grava string — coage pra número */
+    if(inp.sel && typeof v==="string" && v!=="" && !isNaN(+v)) v=+v;
+    ctx[inp.k]=v;
+  });
+  /* 2. derivadas, na ordem declarada no JSON — string simples ou
+     lista de casos condicionais {quando, expr} */
   Object.entries(est.derivadas||{}).forEach(([k,ex])=>{
-    try{ ctx[k]=avaliarExpr(ex,ctx); }
+    try{ ctx[k]=Array.isArray(ex) ? derivadaPorCasos(k,ex,ctx,avisos) : avaliarExpr(ex,ctx); }
     catch(e){ avisos.push(`derivada "${k}": ${e.message}`); ctx[k]=0; }
   });
-  /* 3. avisos — só informam, nunca bloqueiam */
+  /* 3. avisos — só informam, nunca bloqueiam; "quando" opcional
+     limita o aviso a um modo do seletor */
   (est.avisos||[]).forEach(a=>{
-    try{ if(avaliarExpr(a.se,ctx)) avisos.push(a.msg); }
+    try{
+      if(a.quando!==undefined && !avaliarExpr(a.quando,ctx)) return;
+      if(avaliarExpr(a.se,ctx)) avisos.push(a.msg);
+    }
     catch(e){ avisos.push(`aviso "${a.se}": ${e.message}`); }
   });
   /* 4+5. resolver placeholders e emitir na ordem do template */
@@ -480,7 +501,18 @@ function interpretarEstrategia(est, p, c, nb, d){
       try{ return fnum(avaliarExpr(ex,ctx)); }
       catch(e){ avisos.push(`placeholder {${ex}}: ${e.message}`); return m; }
     }));
-  return {linhas, avisos};
+  return {linhas, avisos, ctx};
+}
+
+/* Derivada condicional: lista de casos {quando, expr} avaliados na
+   ordem — vence o primeiro cujo "quando" der verdadeiro; caso sem
+   "quando" é o padrão. Nenhum caso casando vira aviso e vale 0. */
+function derivadaPorCasos(k, casos, ctx, avisos){
+  for(const c of casos){
+    if(c.quando===undefined || avaliarExpr(c.quando,ctx)) return avaliarExpr(c.expr,ctx);
+  }
+  avisos.push(`derivada "${k}": nenhum caso casou`);
+  return 0;
 }
 
 /* Embrulha uma ficha numa entrada DEFS normal — mesma mecânica
@@ -494,7 +526,12 @@ function registrarEstrategia(id, est){
     nome:est.nome||id,
     sub:est.familia?`estratégia · ${est.familia}`:"estratégia JSON",
     cor, hex,
-    params:(est.inputs||[]).map(i=>({k:i.k,l:i.l||i.k,d:i.d,s:i.s||1,u:i.u||""})),
+    params:(est.inputs||[]).map(i=>{
+      const f={k:i.k,l:i.l||i.k,d:i.d,s:i.s||1,u:i.u||""};
+      if(i.sel) f.sel=i.sel;           /* seletor da ficha (dropdown) */
+      if(i.quando!==undefined) f.quando=i.quando; /* campo condicional */
+      return f;
+    }),
     warn(p,c,d){ return interpretarEstrategia(est,p,c,100,d).avisos; },
     gerar(p,c,nb,d){ return interpretarEstrategia(est,p,c,nb,d).linhas; },
     volume(p,c,d){
