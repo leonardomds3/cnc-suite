@@ -87,9 +87,32 @@ E o jeito de conversar com o Leo:
   canalAbertoExpansao e escareadoHelicoidal). Testado nos dois apps no
   navegador: paleta sem os chips antigos, sem erros de console, blocos
   restantes e fichas gerando programa normal. Commit `e4d246d`.
+- **Ficha `canalRaiadoAcabamento` + correção de fronteira reta/raio.**
+  O acabamento do canalR virou ficha (contorno de parede por nível,
+  `#19=(larg-diam)/2` como derivada do Ø ativo, AP e avanço em duas fases,
+  travas de campo zerado). No teste do Leo apareceu o **bug de fronteira**:
+  com `#11=34.798` o passo da reta descia até 35.000 invadindo o raio.
+  Correção nas duas fichas do canal raiado: teto `#16` (`#11` na reta, `#4`
+  no raio) clampa o incremento — o último passo da reta **encosta** no `#11`
+  sem passar; no desbaste a seleção do AP virou LT/GE para o passo que sai
+  da fronteira já usar `apRaio`. Comparativo com o nativo: acabamento com
+  caminho idêntico (372 segs, desvio 0) antes da correção; depois dela, a
+  ficha diverge do nativo **só na fronteira** (o nativo morreu com o bug).
+  Commit `13f6ff2`.
+- **Aposentadoria do `canalR` + remoção de `bolsaRet` e `bolsaCirc`.**
+  O canalR saiu pela regra de migração (100% coberto pelas fichas de
+  desbaste e acabamento testadas). bolsaRet e bolsaCirc saíram por
+  **decisão de escopo do Leo** (não são mais desejadas no projeto), não por
+  cobertura — não têm ficha equivalente. A tela 2D do estúdio perdeu os
+  ramos das três e o código morto de canal/escariado (pendência quitada).
+  Paleta atual: face, bolsaCon, furosL, furosC + as 5 fichas.
+  Commit `856af5a`.
 
 Commits até aqui (do mais recente pro mais antigo):
 
+- `856af5a` — Remove canalR, bolsaRet e bolsaCirc do motor e limpa a tela 2D do estudio
+- `13f6ff2` — Adiciona a ficha canalRaiadoAcabamento e corrige a fronteira reta/raio
+- `10d9bf9` — Atualiza o DIARIO.md: ficha canalRaiadoDesbaste, primeira remocao de nativas e regra de migracao
 - `e4d246d` — Remove do DEFS/ORDEM as operacoes nativas canal e escariado
 - `948f631` — Converte o desbaste do canalR em ficha JSON canalRaiadoDesbaste
 - `f03b548` — Remove do DIARIO.md a pendencia obsoleta de GitHub/push
@@ -111,12 +134,12 @@ Commits até aqui (do mais recente pro mais antigo):
 
 ## Onde paramos
 
-A ficha `canalRaiadoDesbaste` está convertida, testada nos dois apps e
-commitada (`948f631`), e as nativas `canal` e `escariado` saíram do motor
-(`e4d246d`) — essas operações agora vivem só como ficha. O `canalR` segue
-nativo **de propósito**: a ficha cobre só o desbaste dele. Próximo passo
-natural: converter o acabamento do canalR numa segunda ficha, completar a
-cobertura e só então aposentar o nativo, seguindo a regra de migração.
+O canal raiado está **100% em ficha** (desbaste + acabamento, com a
+correção de fronteira do `#11`) e o `canalR` nativo foi aposentado pela
+regra de migração (`856af5a`). bolsaRet e bolsaCirc saíram por decisão de
+escopo. Restam no motor 4 nativas: **face, bolsaCon, furosL e furosC** —
+candidatas às próximas conversões por anotação, quando o Leo trouxer os
+programas anotados.
 
 ---
 
@@ -180,10 +203,8 @@ comparativo lado a lado.
 ## Pendências (não urgentes)
 
 - Tela 2D do estúdio: blocos de estratégia aparecem como marcador genérico,
-  sem contorno — melhoria visual futura.
-- Código morto na tela 2D do estúdio: os ramos `if(t==="canal")` e
-  `if(t==="escariado")` ficaram órfãos depois da remoção das nativas
-  (`e4d246d`) — inofensivos, limpar numa passada futura.
+  sem contorno — melhoria visual futura (ficou mais visível agora que os
+  canais todos viraram ficha).
 - Próximos passos possíveis: botão "Importar estratégias .json" (FileReader);
   automatizar a regeneração do `estrategias.js` a partir do `.json`.
 
