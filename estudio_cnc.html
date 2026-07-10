@@ -107,6 +107,8 @@
   }
   input:focus{border-color:var(--amber);box-shadow:0 0 0 3px #ffb02e22}
   .unit{position:absolute;right:10px;font-size:11px;color:var(--ink-3);pointer-events:none;font-family:"JetBrains Mono",monospace}
+  /* campo exibido ("saida"): mostrador readonly, cara de instrumento */
+  .field.saida input{opacity:.6;border-style:dashed;pointer-events:none}
   select{
     width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
     border-radius:8px;padding:9px 10px;font-family:"JetBrains Mono",monospace;font-size:13.5px;outline:none;
@@ -1093,12 +1095,44 @@ function excluirBloco(uid){
   toast(nome+" removido");
 }
 
+/* ---------- campos condicionais e exibidos (fichas) ---------- */
+/* contexto pro "quando": valores do bloco com string numérica
+   coagida pra número (o <select> grava string) */
+function ctxDoBloco(p){
+  const c={};
+  for(const k in p){ const v=p[k]; c[k]=(typeof v==="string" && v!=="" && !isNaN(+v)) ? +v : v; }
+  return c;
+}
+function campoVisivel(f, ctx){
+  if(f.quando===undefined) return true;
+  try{ return !!avaliarExpr(f.quando, ctx); }
+  catch(e){ return true; } /* condição quebrada nunca esconde campo */
+}
+/* saída = mostrador readonly de uma derivada (ctx do interpretador) */
+function saidaHTML(sd, ctx){
+  const v = ctx && ctx[sd.k]!==undefined ? fnum(ctx[sd.k]) : "—";
+  return `<div class="field saida"><label>${sd.l||sd.k}</label>
+    <div class="inrow">
+      <input type="text" readonly tabindex="-1" value="${v}" data-out="${sd.k}">
+      ${sd.u?`<span class="unit">${sd.u}</span>`:""}
+    </div></div>`;
+}
+function atualizarSaidas(b){
+  const est=ESTRATEGIAS[b.tipo];
+  if(!est || !est.saidas) return;
+  const ctx=interpretarEstrategia(est, b.p, cfg(), 100, b.p.td).ctx;
+  document.querySelectorAll("#inspector [data-out]").forEach(el=>{
+    const k=el.dataset.out;
+    el.value = ctx && ctx[k]!==undefined ? fnum(ctx[k]) : "—";
+  });
+}
+
 /* ---------- inspector ---------- */
 function campoHTML(f,val,uid){
   if(f.sel){
     return `<div class="field" style="grid-column:1/-1"><label>${f.l}</label>
       <div class="inrow"><select data-uid="${uid}" data-k="${f.k}">
-        ${f.sel.map(o=>`<option value="${o.v}"${o.v===val?" selected":""}>${o.t}</option>`).join("")}
+        ${f.sel.map(o=>`<option value="${o.v}"${String(o.v)===String(val)?" selected":""}>${o.t}</option>`).join("")}
       </select></div></div>`;
   }
   if(f.chk){
@@ -1143,7 +1177,17 @@ function renderInspector(){
       <button class="ib" data-act="dup" data-uid="${b.uid}">⧉</button>
       <button class="ib del" data-act="del" data-uid="${b.uid}">✕</button>
     </div></div>`;
-  s+=`<div class="grid3">${D.params.map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>`;
+  const ctxB=ctxDoBloco(b.p);
+  s+=`<div class="grid3">${D.params.filter(f=>campoVisivel(f,ctxB)).map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>`;
+  const est=ESTRATEGIAS[b.tipo];
+  if(est && Array.isArray(est.saidas)){
+    const vis=est.saidas.filter(sd=>campoVisivel(sd,ctxB));
+    if(vis.length){
+      const ctxI=interpretarEstrategia(est, b.p, cfg(), 100, b.p.td).ctx;
+      s+=`<div class="sub">Conferência</div>`;
+      s+=`<div class="grid3">${vis.map(sd=>saidaHTML(sd,ctxI)).join("")}</div>`;
+    }
+  }
   s+=`<div class="sub">Ferramenta deste bloco</div>`;
   s+=`<div class="grid3">${F_TROCA.map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>`;
   el.innerHTML=s;
@@ -1164,6 +1208,10 @@ function onEditInsp(e){
   if(inp.tagName==="SELECT") b.p[inp.dataset.k]=inp.value;
   else if(inp.type==="checkbox") b.p[inp.dataset.k]=inp.checked;
   else b.p[inp.dataset.k]=num(inp.value, b.p[inp.dataset.k]);
+  if(ESTRATEGIAS[b.tipo]){
+    if(inp.tagName==="SELECT") renderInspector(); /* seletor decide quais campos aparecem */
+    else atualizarSaidas(b);                      /* mostradores seguem a digitação, sem rebuild e sem roubar o foco */
+  }
   renderCanvas(); refreshDebounced();
 }
 $("inspector").addEventListener("input",onEditInsp);
