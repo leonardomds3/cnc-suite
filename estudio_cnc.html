@@ -829,17 +829,6 @@ function renderPaleta(){
 function geoInfo(b){
   const p=b.p, t=b.tipo;
   if(t==="face")      return {kind:"rect", cx:0,   cy:0,   w:p.cx2,  h:p.cy2,  mov:false, area:true};
-  if(t==="bolsaRet")  return {kind:"rect", cx:p.cx,cy:p.cy,w:p.lx,   h:p.ly,   mov:true};
-  if(t==="canal"){
-    const hx = p.ori==="x";
-    return {kind:"rect", cx:p.cx,cy:p.cy, w:hx?p.comp:p.larg, h:hx?p.larg:p.comp, mov:true};
-  }
-  if(t==="canalR") return {kind:"rect", cx:p.cx,cy:p.cy,w:p.larg, h:p.comp, mov:true};
-  if(t==="bolsaCirc") return {kind:"circ", cx:p.cx,cy:p.cy,r:p.dia/2,mov:true};
-  if(t==="escariado"){
-    const r2=Math.max(0,p.raio-p.prof*Math.tan(p.ang*Math.PI/180));
-    return {kind:"circ", cx:p.cx,cy:p.cy,r:p.raio,r2, mov:true};
-  }
   if(t==="furosC")    return {kind:"furosC", cx:p.cx,cy:p.cy,r:p.dc/2, mov:true};
   if(t==="furosL")    return {kind:"furosL", mov:true};
   if(t==="bolsaCon")  return {kind:"wedge", mov:false};
@@ -1070,16 +1059,6 @@ function aplicarHandle(b,h,wx,wy){
   const p=b.p, t=b.tipo, ax=Math.abs;
   const mm=v=>Math.max(1,snap(v));
   if(t==="face"){ if(h==="e"||h==="se") p.cx2=mm(ax(wx)*2); if(h==="n"||h==="se") p.cy2=mm(ax(wy)*2); return; }
-  if(t==="bolsaRet"){ if(h==="e"||h==="se") p.lx=mm(ax(wx-p.cx)*2); if(h==="n"||h==="se") p.ly=mm(ax(wy-p.cy)*2); return; }
-  if(t==="canal"){
-    const hx=p.ori==="x";
-    if(h==="e"||h==="se"){ if(hx) p.comp=mm(ax(wx-p.cx)*2); else p.larg=mm(ax(wx-p.cx)*2); }
-    if(h==="n"||h==="se"){ if(hx) p.larg=mm(ax(wy-p.cy)*2); else p.comp=mm(ax(wy-p.cy)*2); }
-    return;
-  }
-  if(t==="canalR"){ if(h==="e"||h==="se") p.larg=mm(ax(wx-p.cx)*2); if(h==="n"||h==="se") p.comp=mm(ax(wy-p.cy)*2); return; }
-  if(t==="bolsaCirc"){ p.dia=mm(Math.hypot(wx-p.cx,wy-p.cy)*2); return; }
-  if(t==="escariado"){ p.raio=Math.max(0.5,snap(Math.hypot(wx-p.cx,wy-p.cy))); return; }
   if(t==="furosC"){ p.dc=mm(Math.hypot(wx-p.cx,wy-p.cy)*2); return; }
   if(t==="furosL"){
     const n=Math.max(2,Math.round(p.n));
