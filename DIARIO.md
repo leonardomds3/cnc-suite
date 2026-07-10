@@ -107,9 +107,31 @@ E o jeito de conversar com o Leo:
   ramos das três e o código morto de canal/escariado (pendência quitada).
   Paleta atual: face, bolsaCon, furosL, furosC + as 5 fichas.
   Commit `856af5a`.
+- **Plataforma de campos condicionais e exibidos (passos 1–4).** O motor
+  ganhou: `TAN()`/`ATAN()` em graus no `avaliarExpr`, derivadas em lista de
+  casos `{quando, expr}` (primeiro que casa vence), `quando` opcional nos
+  avisos, coação do valor de seletor pra número (o `<select>` grava string)
+  e o `ctx` exposto no retorno do `interpretarEstrategia` (`000a6de`).
+  Os dois HTMLs ganharam: filtro `quando` no render dos campos, rebuild do
+  formulário quando o seletor troca, sub-bloco "Conferência" com as
+  `saidas` (mostradores readonly de derivadas, atualizados em place sem
+  roubar o foco de quem digita) e a correção `String()===String()` do
+  `selected` do dropdown (estúdio `cbc22b0`, montador `a4b389f`). A ficha
+  do escareado helicoidal foi reescrita com o seletor **"Calcular por" de
+  3 modos** — topo+ângulo, fundo+ângulo (topo reconstruído por TAN) e dois
+  diâmetros (ângulo por ATAN) — todos convergindo pro **mesmo G-code**
+  pela relação `(raioTopo − raioFundo) = prof × TAN(ângulo)`, com a
+  Conferência de double-check (`987d94f`). Em cada passo a **não-regressão
+  foi provada por hash SHA-256**: as 5 fichas geram código e formulário
+  idênticos byte a byte antes e depois.
 
 Commits até aqui (do mais recente pro mais antigo):
 
+- `987d94f` — Passo 4: escareado helicoidal com seletor Calcular por de 3 modos e Conferencia
+- `a4b389f` — Passo 3: campos condicionais, rebuild no seletor e Conferencia (saidas) no montador
+- `cbc22b0` — Passo 2: campos condicionais, rebuild no seletor e Conferencia (saidas) no estudio
+- `000a6de` — Passo 1: TAN/ATAN, derivadas por casos, quando nos avisos e ctx exposto no interpretador
+- `cae913f` — Atualiza o DIARIO.md: acabamento em ficha, correcao de fronteira e aposentadoria do canalR
 - `856af5a` — Remove canalR, bolsaRet e bolsaCirc do motor e limpa a tela 2D do estudio
 - `13f6ff2` — Adiciona a ficha canalRaiadoAcabamento e corrige a fronteira reta/raio
 - `10d9bf9` — Atualiza o DIARIO.md: ficha canalRaiadoDesbaste, primeira remocao de nativas e regra de migracao
@@ -134,33 +156,26 @@ Commits até aqui (do mais recente pro mais antigo):
 
 ## Onde paramos
 
-O canal raiado está **100% em ficha** (desbaste + acabamento, com a
-correção de fronteira do `#11`) e o `canalR` nativo foi aposentado pela
-regra de migração (`856af5a`). bolsaRet e bolsaCirc saíram por decisão de
-escopo. Restam no motor 4 nativas: **face, bolsaCon, furosL e furosC** —
-candidatas às próximas conversões por anotação, quando o Leo trouxer os
-programas anotados.
+O motor suporta **campos condicionais** (seletor `sel` + `quando`) e
+**campos exibidos** (`saidas` de conferência), nos dois apps. O escareado
+helicoidal já usa os 3 modos de cálculo com Conferência. Restam no motor
+4 nativas: **face, bolsaCon, furosL e furosC** — candidatas a conversão
+quando o Leo trouxer os programas anotados.
 
 ---
 
 ## Para onde vamos
 
-O próximo salto é transformar a **estratégia de usinagem** — o jeito como a
-ferramenta percorre o perfil: direção do corte, stepover (passe lateral), passo Z,
-entrada e saída — em **dados JSON editáveis pelo usuário**, que o `engine.js`
-interpreta e o Three.js desenha.
+O interpretador, os campos condicionais e os campos exibidos **já
+existem** — o salto planejado aqui virou realidade. Próximos alvos
+possíveis:
 
-Decisão já tomada sobre como começar:
+- **Converter as nativas restantes** (face, bolsaCon, furosL, furosC) pelo
+  método de anotação, quando o Leo trouxer os programas anotados.
+- **Sinumerik como camada de saída** (direção de produto abaixo).
 
-- **Nível 1 primeiro:** a estratégia entra como **parâmetros dentro de padrões que
-  o motor já conhece**. O usuário ajusta os números; o motor escolhe entre caminhos
-  pré-definidos. Simples, previsível, testável.
-- **Nível 2 só quando doer:** lógica de percurso livre (o usuário descrevendo
-  estratégias que o motor não tem embutidas) fica pra quando houver **necessidade
-  real**. Não se antecipa a essa complexidade.
-
-A regra de ouro continua: começar pelo que é simples e sólido, e só subir de nível
-quando o chão de fábrica pedir.
+A regra de ouro continua: começar pelo que é simples e sólido, e só subir
+de nível quando o chão de fábrica pedir.
 
 ### Nova direção: converter as operações antigas em fichas JSON
 
@@ -197,6 +212,16 @@ ficha testada nos dois apps. Foi assim que `canal` e `escariado` saíram
 **permanece intacto**: a ficha `canalRaiadoDesbaste` cobre só o desbaste;
 enquanto o acabamento não virar ficha, o nativo fica — inclusive pra teste
 comparativo lado a lado.
+
+### Direção futura de produto: suporte a Siemens Sinumerik
+
+A arquitetura "estratégia é dado" deixa o caminho aberto: **as fichas JSON
+não mudam**. O que entra é um **segundo interpretador de SAÍDA**, que lê
+as mesmas fichas e emite o dialeto Sinumerik — variáveis `R` no lugar de
+`#`, `IF/GOTOF/GOTOB` no lugar do `IF/GOTO` Fanuc, cabeçalho e funções
+próprios. O miolo de movimento (G0/G1/G2/G3) é quase comum entre os dois
+mundos; **a dificuldade real está na lógica paramétrica**. Regra: não
+reescrever estratégias — só a camada de saída.
 
 ---
 
@@ -276,6 +301,11 @@ e serve de **formato de referência do interpretador** — é o molde de como um
 estratégia deve ser. **Preserve-o.** Não apague, não sobrescreva sem necessidade real;
 use como base e espelho ao construir o interpretador.
 
+*(Atualização: o interpretador **já existe e evoluiu** — campos condicionais
+e exibidos inclusos. O arquivo segue sendo o formato de referência e a
+matemática validada dos canais; a regra de preservação continua valendo
+igual.)*
+
 ### 5. O interpretador NÃO aprende — a biblioteca é que cresce
 
 O interpretador **executa a ficha, sempre igual**. Dar mais estratégias a ele **não**
@@ -298,3 +328,19 @@ Adivinhar exige o julgamento de chão de fábrica do Leo; automatizar isso
 terceirizaria a parte mais valiosa do processo e geraria fichas que precisariam
 ser revisadas uma a uma de qualquer forma — com risco de erro escondido.
 **O julgamento é do Leo; a tradução para JSON é do Claude.**
+
+### 7. Campo exibido é uma "saida", separado de input
+
+Campo exibido (mostrador readonly de uma derivada, pra conferência) vive na
+seção `"saidas"` da ficha — **nunca** marcar um input como "só exibir".
+Input tem valor próprio, entra no bloco e no projeto salvo; saída é só um
+mostrador do `ctx`. Misturar as duas naturezas foi um caminho considerado
+e **rejeitado** na revisão do formato.
+
+### 8. Mudança no motor exige prova de não-regressão por hash
+
+Toda mudança no `engine.js` deve provar não-regressão: gerar o código (e
+avisos) das fichas atuais com defaults **antes e depois** e comparar por
+hash — **idêntico byte a byte**. Foi assim nos passos 1–4 dos campos
+condicionais e é assim que fica. Diferença esperada tem que ser explicável
+linha a linha (como na correção de fronteira do canal raiado).
