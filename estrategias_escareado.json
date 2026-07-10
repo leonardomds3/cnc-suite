@@ -19,34 +19,57 @@
       "nome": "Escareado helicoidal",
       "familia": "escareado",
       "cor": "#6fe0ac",
-      "descricao": "Escareado com angulo e diametro quaisquer, para quando nao ha ferramenta especifica. Interpolacao helicoidal G3: a cada volta o Z desce um incremento e o raio de trabalho encolhe TAN do angulo, formando o cone. Convertido do programa anotado do Leo (programas_anotados/escareado_helicoidal.NC).",
+      "descricao": "Escareado com angulo e diametro quaisquer, para quando nao ha ferramenta especifica. Interpolacao helicoidal G3: a cada volta o Z desce um incremento e o raio de trabalho encolhe TAN do angulo, formando o cone. Seletor 'Calcular por' com 3 modos, amarrados pela relacao (raioTopo - raioFundo) = prof x TAN(angulo): topo+angulo, fundo+angulo (topo reconstruido) ou dois diametros (angulo por ATAN). O template usa sempre as derivadas canonicas angEfetivo e rt. Convertido do programa anotado do Leo (programas_anotados/escareado_helicoidal.NC).",
       "inputs": [
-        { "k": "furoDiam", "l": "Diametro inicial do escareado", "d": 40,   "s": 0.5,  "u": "mm" },
-        { "k": "ang",      "l": "Angulo com o eixo Z",           "d": 66.8, "s": 0.1,  "u": "graus" },
-        { "k": "prof",     "l": "Profundidade final",            "d": 6,    "s": 0.1,  "u": "mm" },
-        { "k": "ap",       "l": "Incremento Z (ap)",             "d": 0.1,  "s": 0.05, "u": "mm" },
-        { "k": "zIni",     "l": "Z inicial",                     "d": 0,    "s": 0.1,  "u": "mm" },
-        { "k": "f",        "l": "Avanco",                        "d": 800,  "s": 50,   "u": "mm/min" },
-        { "k": "cx",       "l": "Centro X (origem)",             "d": 0,    "s": 1,    "u": "mm" },
-        { "k": "cy",       "l": "Centro Y (origem)",             "d": 0,    "s": 1,    "u": "mm" }
+        { "k": "calcpor", "l": "Calcular por", "d": 1, "s": 1, "sel": [
+          { "v": 1, "t": "Diametro do topo + angulo" },
+          { "v": 2, "t": "Diametro do fundo + angulo" },
+          { "v": 3, "t": "Dois diametros (topo e fundo)" }
+        ] },
+        { "k": "diamTopo",  "l": "Diametro do topo",    "d": 40,   "s": 0.5,  "u": "mm",    "quando": "calcpor != 2" },
+        { "k": "diamFundo", "l": "Diametro do fundo",   "d": 12,   "s": 0.5,  "u": "mm",    "quando": "calcpor != 1" },
+        { "k": "ang",       "l": "Angulo com o eixo Z", "d": 66.8, "s": 0.1,  "u": "graus", "quando": "calcpor != 3" },
+        { "k": "prof",      "l": "Profundidade final",  "d": 6,    "s": 0.1,  "u": "mm" },
+        { "k": "ap",        "l": "Incremento Z (ap)",   "d": 0.1,  "s": 0.05, "u": "mm" },
+        { "k": "zIni",      "l": "Z inicial",           "d": 0,    "s": 0.1,  "u": "mm" },
+        { "k": "f",         "l": "Avanco",              "d": 800,  "s": 50,   "u": "mm/min" },
+        { "k": "cx",        "l": "Centro X (origem)",   "d": 0,    "s": 1,    "u": "mm" },
+        { "k": "cy",        "l": "Centro Y (origem)",   "d": 0,    "s": 1,    "u": "mm" }
       ],
       "derivadas": {
-        "rt": "(furoDiam - diam)/2"
+        "angEfetivo": [
+          { "quando": "calcpor == 3", "expr": "ATAN(((diamTopo - diamFundo)/2)/prof)" },
+          { "expr": "ang" }
+        ],
+        "diamTopoEfetivo": [
+          { "quando": "calcpor == 2", "expr": "diamFundo + 2*prof*TAN(angEfetivo)" },
+          { "expr": "diamTopo" }
+        ],
+        "rt": "(diamTopoEfetivo - diam)/2"
       },
       "avisos": [
-        { "se": "furoDiam <= diam", "msg": "DIAMETRO DO ESCAREADO MENOR OU IGUAL AO DIAMETRO DA FERRAMENTA" },
-        { "se": "ang >= 90",        "msg": "ANGULO DEVE SER MENOR QUE 90 GRAUS" },
-        { "se": "ang <= 0",         "msg": "ANGULO DEVE SER MAIOR QUE 0 GRAUS" },
-        { "se": "zIni >= prof",     "msg": "Z INICIAL MAIOR OU IGUAL A PROFUNDIDADE FINAL - NADA A USINAR" }
+        { "se": "diamTopoEfetivo <= diam", "msg": "DIAMETRO DO ESCAREADO MENOR OU IGUAL AO DIAMETRO DA FERRAMENTA" },
+        { "se": "angEfetivo >= 90",        "msg": "ANGULO DEVE SER MENOR QUE 90 GRAUS" },
+        { "se": "ang <= 0",       "quando": "calcpor != 3", "msg": "ANGULO NAO DEFINIDO OU INVALIDO - AJUSTE O CAMPO" },
+        { "se": "diamTopo <= 0",  "quando": "calcpor != 2", "msg": "DIAMETRO DO TOPO NAO DEFINIDO - AJUSTE O CAMPO" },
+        { "se": "diamFundo <= 0", "quando": "calcpor != 1", "msg": "DIAMETRO DO FUNDO NAO DEFINIDO - AJUSTE O CAMPO" },
+        { "se": "diamTopo <= diamFundo", "quando": "calcpor == 3", "msg": "DIAMETRO DO TOPO DEVE SER MAIOR QUE O DO FUNDO" },
+        { "se": "prof <= 0",      "msg": "PROFUNDIDADE NAO DEFINIDA - AJUSTE O CAMPO" },
+        { "se": "zIni >= prof",   "msg": "Z INICIAL MAIOR OU IGUAL A PROFUNDIDADE FINAL - NADA A USINAR" }
+      ],
+      "saidas": [
+        { "k": "angEfetivo",      "l": "Angulo (calculado)",    "u": "graus", "quando": "calcpor == 3" },
+        { "k": "diamTopoEfetivo", "l": "O do topo (calculado)", "u": "mm",    "quando": "calcpor == 2" },
+        { "k": "rt",              "l": "Raio de trabalho",      "u": "mm" }
       ],
       "template": [
         "#23={cx}(CENTRO X)",
         "#24={cy}(CENTRO Y)",
         "#1={ap}(INCREMENTO Z)",
         "#2={zIni}(Z INICIAL)",
-        "#7={ang}(ANGULO COM O EIXO Z)",
+        "#7={angEfetivo}(ANGULO COM O EIXO Z)",
         "#4={prof}(PROFUNDIDADE FINAL)",
-        "#5={rt}(RAIO DE TRABALHO = [FURO-FERRAMENTA]/2)",
+        "#5={rt}(RAIO DE TRABALHO = [TOPO-FERRAMENTA]/2)",
         "#10={f}(AVANCO)",
         "G0X[#23]Y[#24]",
         "G0Z0.",
