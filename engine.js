@@ -274,60 +274,6 @@ const DEFS = {
     }
   },
 
-  /* ---------------- ESCARIADO ANGULAR (estrategia do Chanfro_Conico.NC) ---------------- */
-  escariado:{
-    nome:"Escariado angular", sub:"círculo por nível · G41", cor:"var(--green)", hex:0x6fe0ac,
-    params:[
-      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
-      {k:"raio",l:"Raio no topo (#5)",d:15,s:0.5,u:"mm"},
-      {k:"ang",l:"Ângulo c/ eixo Z (#7)",d:66.8,s:0.1,u:"°"},
-      {k:"prof",l:"Profundidade (#4)",d:6,s:0.1,u:"mm"},
-      {k:"ap",l:"Incremento Z (#1)",d:0.1,s:0.05,u:"mm"},
-      {k:"f",l:"Avanço F",d:1600,s:50,u:"mm/min"},
-      {k:"comp",l:"Compensação de raio",sel:[
-        {v:"g41",t:"Com G41/G40 (raio da peça no programa)"},
-        {v:"sem",t:"Sem compensação (desconta o raio da fresa)"},
-      ],d:"g41"},
-    ],
-    warn(p,c,d){ const w=[];
-      if(p.ang<=0||p.ang>=90) w.push("Ângulo deve ficar entre 0° e 90° (medido a partir do eixo Z, como no Chanfro Cônico).");
-      const queda=p.prof*Math.tan(p.ang*Math.PI/180);
-      const rBase = p.comp==="sem" ? p.raio-d/2 : p.raio;
-      if(rBase-queda<=0) w.push("O raio zera antes da profundidade final: reduza o ângulo, a profundidade ou aumente o raio.");
-      if(p.comp==="g41" && p.raio<=d/2) w.push("Raio no topo menor que o raio da fresa: G41 vai alarmar.");
-      if(p.prof>c.bz) w.push("Profundidade maior que a altura do bloco.");
-      return w; },
-    gerar(p,c,nb,d){
-      const rf=d/2, L=[];
-      const comG41 = p.comp!=="sem";
-      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
-      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
-      L.push(`#7=${fnum(p.ang)}(ANGULO COM O EIXO Z)`);
-      L.push(`#5=${fnum(comG41?p.raio:Math.max(0.1,p.raio-rf))}(RAIO NO TOPO${comG41?"":" - RAIO DA FRESA DESCONTADO"})`);
-      L.push(`#4=${fnum(p.prof)}(PROFUNDIDADE)`);
-      L.push(`#1=${fnum(p.ap)}(INCREMENTO)`);
-      L.push(`#2=0(Z ATUAL)`);
-      L.push(`G0X[#23]Y[#24]`);
-      L.push(`G0Z2.`);
-      L.push(`N${nb+10}#2=#2+#1`);
-      L.push(`#3=#2*TAN[#7]`);
-      L.push(`#6=#5-#3(RAIO NESTE NIVEL)`);
-      L.push(`IF[#2GT#4]GOTO${nb+20}`);
-      L.push(`G1Z-[#2]F${fnum(p.f)}`);
-      L.push(comG41 ? `G1G41X[#23+#6]` : `G1X[#23+#6]`);
-      L.push(`G3I-[#6]`);
-      L.push(comG41 ? `G1G40X[#23]` : `G1X[#23]`);
-      L.push(`GOTO${nb+10}`);
-      L.push(`N${nb+20}G0Z2.`);
-      return L;
-    },
-    volume(p,c,d){
-      const rb=Math.max(0.3, p.raio - p.prof*Math.tan(p.ang*Math.PI/180));
-      const m=new THREE.Mesh(new THREE.CylinderGeometry(p.raio,rb,p.prof,48));
-      m.position.set(p.cx,-p.prof/2,-p.cy); return m;
-    }
-  },
-
   /* ---------------- BOLSA CÔNICA (macro Bolsa_Final) ---------------- */
   bolsaCon:{
     nome:"Bolsa cônica", sub:"rampa em X · macro Bolsa_Final", cor:"var(--green)", hex:0x3fe0b0,
@@ -402,103 +348,6 @@ const DEFS = {
     }
   },
 
-  /* ---------------- CANAL RETO ---------------- */
-  canal:{
-    nome:"Canal reto", sub:"desbaste + acabamento", cor:"var(--cyan)", hex:0x4dd0e1,
-    params:[
-      {k:"cx",l:"Centro X",d:0,s:1,u:"mm"},{k:"cy",l:"Centro Y",d:0,s:1,u:"mm"},
-      {k:"comp",l:"Comprimento",d:100,s:1,u:"mm"},
-      {k:"larg",l:"Largura final",d:16,s:0.5,u:"mm"},
-      {k:"prof",l:"Profundidade",d:8,s:0.5,u:"mm"},
-      {k:"ori",l:"Direção do canal",sel:[
-        {v:"x",t:"Ao longo de X"},
-        {v:"y",t:"Ao longo de Y"},
-      ],d:"x"},
-      {k:"est",l:"Estratégia de desbaste",sel:[
-        {v:"lat",t:"Incremento no Z + passes laterais"},
-        {v:"soz",t:"Incremento só no Z (vai-e-vem no centro)"},
-      ],d:"lat"},
-      {k:"ap",l:"AP desbaste",d:0.25,s:0.05,u:"mm"},
-      {k:"f",l:"F desbaste",d:2000,s:50,u:"mm/min"},
-      {k:"sobre",l:"Sobremetal lateral",d:0.5,s:0.1,u:"mm"},
-      {k:"acab",l:"Fazer acabamento (passe nas paredes)",chk:true,d:true},
-      {k:"apA",l:"AP acabamento",d:8,s:0.5,u:"mm"},
-      {k:"fA",l:"F acabamento",d:800,s:50,u:"mm/min"},
-    ],
-    warn(p,c,d){ const w=[];
-      if(d>p.larg){ w.push(`ERRO: Ø da fresa (${fnum(d)}) maior que a largura do canal (${fnum(p.larg)}) — bloco não gerado.`); return w; }
-      const offA=(p.larg-d)/2;
-      if(offA>0.005) w.push(`Folga da ferramenta: ${fnum(offA)} mm para cada lado (canal ${fnum(p.larg)} · fresa Ø${fnum(d)}).`);
-      if(p.est==="soz" && offA>0.005 && !p.acab) w.push("Estratégia só no Z deixa a largura da fresa: ligue o acabamento ou use passes laterais para chegar na largura final.");
-      if(p.acab && p.larg-2*p.sobre<d) w.push("Sobremetal lateral maior que a folga: o desbaste sairá na linha de centro e o acabamento remove o resto.");
-      if(p.prof>c.bz) w.push("Profundidade maior que a altura do bloco.");
-      return w; },
-    gerar(p,c,nb,d){
-      if(d>p.larg) return [`(ERRO: FERRAMENTA O${fnum(d)} MAIOR QUE A LARGURA ${fnum(p.larg)} - BLOCO NAO GERADO)`];
-      const L=[];
-      const A = p.ori==="x" ? "X" : "Y";
-      const B = p.ori==="x" ? "Y" : "X";
-      const aC = p.ori==="x" ? "#23" : "#24";
-      const bC = p.ori==="x" ? "#24" : "#23";
-      const offD = Math.max(0, (p.larg - 2*p.sobre - d)/2);
-      const offA = (p.larg - d)/2;
-      L.push(`#23=${fnum(p.cx)}(CENTRO X)`);
-      L.push(`#24=${fnum(p.cy)}(CENTRO Y)`);
-      L.push(`#8=${fnum(p.comp/2)}(MEIO COMPRIMENTO)`);
-      L.push(`#4=${fnum(p.prof)}(PROFUNDIDADE)`);
-      const lateral = p.est==="lat" && offD>0.005;
-      L.push(`(DESBASTE${lateral?` - ${fnum(offD)} PARA CADA LADO`:" - SO INCREMENTO NO Z"})`);
-      if(lateral){
-        L.push(`G0${A}[${aC}+#8]${B}[${bC}+${fnum(offD)}]`);
-        L.push(`G0Z2.`);
-        L.push(`#1=0(Z ATUAL)`);
-        L.push(`N${nb+10}IF[#1GT#4]GOTO${nb+20}`);
-        L.push(`G0Z-[#1]`);
-        L.push(`G1${A}[${aC}-#8]F${fnum(p.f)}`);
-        L.push(`G1${B}[${bC}-${fnum(offD)}]`);
-        L.push(`G1${A}[${aC}+#8]`);
-        L.push(`G0${B}[${bC}+${fnum(offD)}]`);
-        L.push(`#1=#1+${fnum(p.ap)}`);
-        L.push(`GOTO${nb+10}`);
-      } else {
-        L.push(`G0${A}[${aC}+#8]${B}[${bC}]`);
-        L.push(`G0Z2.`);
-        L.push(`#1=0(Z ATUAL)`);
-        L.push(`N${nb+10}IF[#1GT#4]GOTO${nb+20}`);
-        L.push(`G0Z-[#1]`);
-        L.push(`G1${A}[${aC}-#8]F${fnum(p.f)}`);
-        L.push(`#1=#1+${fnum(p.ap)}`);
-        L.push(`IF[#1GT#4]GOTO${nb+20}`);
-        L.push(`G0Z-[#1]`);
-        L.push(`G1${A}[${aC}+#8]`);
-        L.push(`#1=#1+${fnum(p.ap)}`);
-        L.push(`GOTO${nb+10}`);
-      }
-      L.push(`N${nb+20}G0Z2.`);
-      if(p.acab){
-        L.push(`(ACABAMENTO - ${fnum(offA)} PARA CADA LADO)`);
-        L.push(`G0${A}[${aC}+#8]${B}[${bC}+${fnum(offA)}]`);
-        L.push(`#1=0(Z ATUAL)`);
-        L.push(`N${nb+30}#1=#1+${fnum(p.apA)}`);
-        L.push(`IF[#1GT#4]THEN#1=#4`);
-        L.push(`G0Z-[#1]`);
-        L.push(`G1${A}[${aC}-#8]F${fnum(p.fA)}`);
-        L.push(`G1${B}[${bC}-${fnum(offA)}]`);
-        L.push(`G1${A}[${aC}+#8]`);
-        L.push(`G0${B}[${bC}+${fnum(offA)}]`);
-        L.push(`IF[#1LT#4]GOTO${nb+30}`);
-        L.push(`G0Z2.`);
-      }
-      return L;
-    },
-    volume(p,c,d){
-      const larg=Math.max(p.larg,d);
-      const gx = p.ori==="x" ? p.comp : larg;
-      const gy = p.ori==="x" ? larg : p.comp;
-      const m=new THREE.Mesh(new THREE.BoxGeometry(gx,p.prof,gy));
-      m.position.set(p.cx,-p.prof/2,-p.cy); return m;
-    }
-  },
   canalR:{
     nome:"Canal fundo raiado", sub:"raio R no fundo (Y)", cor:"var(--cyan)", hex:0x2fa6b5,
     params:[
@@ -712,7 +561,7 @@ const DEFS = {
   },
 };
 
-const ORDEM = ["face","bolsaRet","bolsaCirc","bolsaCon","escariado","canal","canalR","furosL","furosC"];
+const ORDEM = ["face","bolsaRet","bolsaCirc","bolsaCon","canalR","furosL","furosC"];
 
 /* ============================================================
    MACROS PERSONALIZADOS (cadastrados pelo usuário)
