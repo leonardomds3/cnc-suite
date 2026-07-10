@@ -72,9 +72,29 @@ E o jeito de conversar com o Leo:
 - **O acervo começou:** o `.NC` anotado original está guardado em
   `programas_anotados/escareado_helicoidal.NC`. As anotações do Leo são o banco
   de conhecimento — não podem se perder.
+- **Ficha `canalRaiadoDesbaste`** (`estrategias_canal.json`): o desbaste do
+  canalR convertido em ficha, preservando a matemática validada do arco
+  (`#9=SQRT[[#7*#7]-[#17*#17]]`) e da expansão lateral. Duas fases com o
+  mesmo IF do `#11` selecionando AP e avanço: `apReta`/`fReta` na parte reta
+  (incremento fora da peça), `apRaio`/`fRaio` no fundo em U (mergulho direto
+  no material). Travas de segurança: os 4 campos novos nascem em 0 e cada um
+  tem aviso "NAO DEFINIDO - AJUSTE O CAMPO" — AP zerado deixaria o laço de Z
+  em loop infinito na máquina. Os `Math.max` do JS viraram clamps Macro B no
+  template (`IF[#8LT0.1]THEN#8=0.1`, `IF[#5LT0]THEN#5=0`). Testada nos dois
+  apps. Commit `948f631`.
+- **Primeira remoção de nativas: `canal` e `escariado` saíram do
+  `DEFS`/`ORDEM`** — já cobertas pelas fichas testadas (canalAbertoSimples,
+  canalAbertoExpansao e escareadoHelicoidal). Testado nos dois apps no
+  navegador: paleta sem os chips antigos, sem erros de console, blocos
+  restantes e fichas gerando programa normal. Commit `e4d246d`.
 
 Commits até aqui (do mais recente pro mais antigo):
 
+- `e4d246d` — Remove do DEFS/ORDEM as operacoes nativas canal e escariado
+- `948f631` — Converte o desbaste do canalR em ficha JSON canalRaiadoDesbaste
+- `f03b548` — Remove do DIARIO.md a pendencia obsoleta de GitHub/push
+- `01a7ab0` — Converte o escareado helicoidal em estrategia JSON pelo metodo de anotacao
+- `2a62cd4` — Atualiza o DIARIO.md: interpretador de ponta a ponta e nova direcao de conversao
 - `7b78d40` — Liga o interpretador nos dois apps: estrategias.js derivado do JSON + paleta
 - `8013a6d` — Atualiza o DIARIO.md: parte 1 do interpretador feita, proximo passo e ligar nos HTMLs
 - `cdd942f` — Adiciona o interpretador de estrategias (fichas JSON) ao engine.js
@@ -91,12 +111,12 @@ Commits até aqui (do mais recente pro mais antigo):
 
 ## Onde paramos
 
-O escareado helicoidal foi convertido pelo método novo (anotação → ficha) e o
-`estrategias.js` foi regenerado com as duas famílias (canal + escareado).
-Arquivos na árvore, **ainda sem commit**: falta o teste no navegador nos dois
-apps — escareado na paleta, matemática do `#5=(furoDiam-diam)/2` com a
-ferramenta ativa, hélice no preview 3D — e só depois commitar, como manda o
-método.
+A ficha `canalRaiadoDesbaste` está convertida, testada nos dois apps e
+commitada (`948f631`), e as nativas `canal` e `escariado` saíram do motor
+(`e4d246d`) — essas operações agora vivem só como ficha. O `canalR` segue
+nativo **de propósito**: a ficha cobre só o desbaste dele. Próximo passo
+natural: converter o acabamento do canalR numa segunda ficha, completar a
+cobertura e só então aposentar o nativo, seguindo a regra de migração.
 
 ---
 
@@ -147,12 +167,23 @@ vira base):**
   - `@CR` = crítico (lógica não pode ser tocada)
   - Linha sem marca = mantida como está.
 
+**Regra de migração (seguida na primeira remoção):** operação nativa só sai
+do `DEFS`/`ORDEM` quando **TODAS** as suas funções estiverem cobertas por
+ficha testada nos dois apps. Foi assim que `canal` e `escariado` saíram
+(cobertos por canalAbertoSimples/Expansao e escareadoHelicoidal). O `canalR`
+**permanece intacto**: a ficha `canalRaiadoDesbaste` cobre só o desbaste;
+enquanto o acabamento não virar ficha, o nativo fica — inclusive pra teste
+comparativo lado a lado.
+
 ---
 
 ## Pendências (não urgentes)
 
 - Tela 2D do estúdio: blocos de estratégia aparecem como marcador genérico,
   sem contorno — melhoria visual futura.
+- Código morto na tela 2D do estúdio: os ramos `if(t==="canal")` e
+  `if(t==="escariado")` ficaram órfãos depois da remoção das nativas
+  (`e4d246d`) — inofensivos, limpar numa passada futura.
 - Próximos passos possíveis: botão "Importar estratégias .json" (FileReader);
   automatizar a regeneração do `estrategias.js` a partir do `.json`.
 
