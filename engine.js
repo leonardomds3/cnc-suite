@@ -495,12 +495,24 @@ function interpretarEstrategia(est, p, c, nb, d){
     }
     catch(e){ avisos.push(`aviso "${a.se}": ${e.message}`); }
   });
-  /* 4+5. resolver placeholders e emitir na ordem do template */
-  const linhas=(est.template||[]).map(l=>
-    l.replace(/\{([^{}]+)\}/g,(m,ex)=>{
+  /* 4+5. resolver placeholders e emitir na ordem do template.
+     Linha pode ser objeto {quando, l}: só sai se o "quando" der
+     verdadeiro (liga/desliga de trecho, ex.: espelhamento G51.1).
+     Erro no "quando" omite a linha e vira aviso — na dúvida é
+     mais seguro não emitir. */
+  const linhas=[];
+  (est.template||[]).forEach(l=>{
+    let txt=l;
+    if(typeof l==="object" && l!==null){
+      try{ if(l.quando!==undefined && !avaliarExpr(l.quando,ctx)) return; }
+      catch(e){ avisos.push(`linha condicional (${l.quando}): ${e.message}`); return; }
+      txt=l.l!==undefined?l.l:"";
+    }
+    linhas.push(String(txt).replace(/\{([^{}]+)\}/g,(m,ex)=>{
       try{ return fnum(avaliarExpr(ex,ctx)); }
       catch(e){ avisos.push(`placeholder {${ex}}: ${e.message}`); return m; }
     }));
+  });
   return {linhas, avisos, ctx};
 }
 
