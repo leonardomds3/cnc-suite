@@ -359,6 +359,87 @@ const ESTRATEGIAS_PADRAO =
         "GOTO{nb+10}",
         "N{nb+20}G0Z[#26]"
       ]
+    },
+    "bolsaFinal": {
+      "nome": "Bolsa final",
+      "familia": "bolsa",
+      "cor": "#e0a86f",
+      "descricao": "Acabamento da bolsa desbastada: parede em rampa. A cada passe o Z desce um incremento e o X da parede recua TAN do angulo (#3=#2*TAN[#7], #6=#5-#3), alternando os lados Y+/Y- da bolsa (laco N30/GOTO30 do programa validado). ZERAMENTO: X no valor do ultimo passe em X na profundidade final (a saida 'X final' e a referencia de zeramento), Y no centro, Z na juncao. Seletor 'Calcular por': angulo direto, ou X inicial/final e Z inicial/final (angulo por ATAN). Espelhamento G51.1 X0 opcional para a bolsa oposta. Convertido do programa anotado do Leo (programas_anotados/bolsa_final.NC).",
+      "inputs": [
+        { "k": "calcpor", "l": "Calcular por", "d": 1, "s": 1, "sel": [
+          { "v": 1, "t": "Tenho o angulo" },
+          { "v": 2, "t": "Tenho X e Z" }
+        ] },
+        { "k": "espelhar", "l": "Espelhamento (bolsa oposta)", "d": 0, "s": 1, "sel": [
+          { "v": 0, "t": "Nao" },
+          { "v": 1, "t": "Sim - G51.1 X0" }
+        ] },
+        { "k": "ang",      "l": "Angulo da parede",                     "d": 16,   "s": 0.1,  "u": "graus", "quando": "calcpor == 1" },
+        { "k": "raioInt",  "l": "Raio do diametro interno (X inicial)", "d": 100,  "s": 0.5,  "u": "mm" },
+        { "k": "xFin",     "l": "X final",                              "d": 92,   "s": 0.5,  "u": "mm",    "quando": "calcpor == 2" },
+        { "k": "zIni",     "l": "Z inicial",                            "d": 0,    "s": 0.1,  "u": "mm" },
+        { "k": "zFin",     "l": "Z final",                              "d": 28,   "s": 0.1,  "u": "mm" },
+        { "k": "ap",       "l": "Incremento (AP)",                      "d": 0.25, "s": 0.05, "u": "mm" },
+        { "k": "f",        "l": "Avanco",                               "d": 2000, "s": 50,   "u": "mm/min" },
+        { "k": "meiaComp", "l": "Metade do comprimento da bolsa",       "d": 61,   "s": 0.5,  "u": "mm" }
+      ],
+      "derivadas": {
+        "angEfetivo": [
+          { "quando": "calcpor == 2", "expr": "ATAN((raioInt - xFin)/(zFin - zIni))" },
+          { "expr": "ang" }
+        ],
+        "xFinRef": "raioInt - zFin*TAN(angEfetivo)",
+        "xRecuo": "xFinRef - (20 + diam/2)"
+      },
+      "avisos": [
+        { "se": "ap <= 0",       "msg": "INCREMENTO AP NAO DEFINIDO - AJUSTE O CAMPO (AP ZERO = LOOP INFINITO NA MAQUINA)" },
+        { "se": "f <= 0",        "msg": "AVANCO NAO DEFINIDO - AJUSTE O CAMPO" },
+        { "se": "xRecuo <= 0",   "msg": "X DE RECUO NEGATIVO - GEOMETRIA IMPOSSIVEL (X FINAL PEQUENO OU FERRAMENTA GRANDE DEMAIS)" },
+        { "se": "meiaComp <= 0", "msg": "METADE DO COMPRIMENTO NAO DEFINIDA - AJUSTE O CAMPO" },
+        { "se": "raioInt <= 0",  "msg": "RAIO INTERNO NAO DEFINIDO - AJUSTE O CAMPO" },
+        { "se": "zFin <= zIni",  "msg": "Z FINAL MENOR OU IGUAL AO Z INICIAL - NADA A USINAR" },
+        { "se": "ang <= 0",        "quando": "calcpor == 1", "msg": "ANGULO NAO DEFINIDO - AJUSTE O CAMPO" },
+        { "se": "xFin <= 0",       "quando": "calcpor == 2", "msg": "X FINAL NAO DEFINIDO - AJUSTE O CAMPO" },
+        { "se": "xFin >= raioInt", "quando": "calcpor == 2", "msg": "X FINAL DEVE SER MENOR QUE O RAIO INTERNO" },
+        { "se": "angEfetivo >= 90", "msg": "ANGULO DEVE SER MENOR QUE 90 GRAUS" }
+      ],
+      "saidas": [
+        { "k": "angEfetivo", "l": "Angulo (calculado)",                "u": "graus", "quando": "calcpor == 2" },
+        { "k": "xFinRef",    "l": "X final (referencia de zeramento)", "u": "mm" },
+        { "k": "xRecuo",     "l": "X de recuo (calculado)",            "u": "mm" }
+      ],
+      "template": [
+        { "quando": "espelhar == 1", "l": "G51.1X0.(ESPELHAMENTO BOLSA OPOSTA)" },
+        "#8={xRecuo}(X DE RECUO SEGURO - CALCULADO)",
+        "#9={meiaComp}(METADE DO COMPRIMENTO DA BOLSA)",
+        "#1={ap}(INCREMENTO AP)",
+        "#2={zIni}(Z INICIAL)",
+        "#7={angEfetivo}(ANGULO DA PAREDE)",
+        "#4={zFin}(Z FINAL)",
+        "#5={raioInt}(RAIO DO DIAMETRO INTERNO)",
+        "#10={f}(AVANCO)",
+        "(X FINAL = REFERENCIA DE ZERAMENTO NA PROFUNDIDADE FINAL: {xFinRef})",
+        "G0X[#8]Y[#9](POSICIONAMENTO INICIAL)",
+        "N{nb+10}#2=#1+#2",
+        "#3=#2*TAN[#7](INCREMENTO DA RAMPA)",
+        "#6=#5-#3(X DESTE PASSE)",
+        "IF[#2GT#4]GOTO{nb+20}",
+        "G0Z-[#2]",
+        "G1X[#6]F[#10]",
+        "G1Y-[#9]",
+        "G1X[#8]",
+        "#2=#1+#2",
+        "#3=#2*TAN[#7]",
+        "#6=#5-#3",
+        "IF[#2GT#4]GOTO{nb+20}",
+        "G0Z-[#2]",
+        "G1X[#6]F[#10]",
+        "G1Y[#9]",
+        "G1X[#8]",
+        "GOTO{nb+10}",
+        "N{nb+20}G0Z[#26]",
+        { "quando": "espelhar == 1", "l": "G50.1(CANCELA ESPELHAMENTO)" }
+      ]
     }
   }
 }
