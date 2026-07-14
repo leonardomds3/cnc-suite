@@ -124,9 +124,39 @@ E o jeito de conversar com o Leo:
   Conferência de double-check (`987d94f`). Em cada passo a **não-regressão
   foi provada por hash SHA-256**: as 5 fichas geram código e formulário
   idênticos byte a byte antes e depois.
+- **Linha condicional no template do motor.** O interpretador aceita linha
+  como objeto `{quando, l}`: só é emitida quando a expressão der verdadeiro —
+  o liga/desliga de trechos (ex.: espelhamento G51.1). Erro no `quando` omite
+  a linha e vira aviso (na dúvida, não emitir). Prova de não-regressão por
+  hash feita primeiro numa CÓPIA no scratchpad: as 5 fichas idênticas byte a
+  byte antes/depois (`16268485…`), só então aplicada no engine.js real.
+  Commit `d7c4cb1`.
+- **Ficha `bolsaFinal` — conversão da bolsa cônica pelo método de anotação.**
+  Família nova `estrategias_bolsa.json`; o anotado do Leo guardado em
+  `programas_anotados/bolsa_final.NC`. Seletor "Calcular por" de 2 modos
+  (ângulo direto, ou X/Z inicial e final com ângulo por ATAN), espelhamento
+  G51.1/G50.1 em linhas condicionais, avanço como input (F2000 do original
+  virou default), #26 global (não é input). Melhoria intencional sobre o
+  original: o X de recuo (#8) deixou de ser input e virou derivada automática
+  `xRecuo = xFinRef - (20 + diam/2)` — sempre 20 mm além do raio da
+  ferramenta ativa, pra qualquer fresa (com Ø10 dá 66.971; o original usava
+  85 fixo). Conferência: ângulo calculado, X final (referência de zeramento
+  na profundidade final) e X de recuo. Comparativo com o original via execNC:
+  336 segmentos de corte nos dois, paredes com desvio 0, divergência só nos
+  pontos do recuo (18.029 em X — esperada). Commit `982f09e`.
+- **Aposentadoria da `bolsaCon`.** A nativa saiu do `DEFS`/`ORDEM` pela regra
+  de migração (100% coberta pela `bolsaFinal` testada nos dois apps — era a
+  mesma macro Bolsa_Final, até nos defaults). A tela 2D do estúdio perdeu os
+  4 ramos órfãos do `wedge` (geoInfo, render, handles e drag). Paleta atual:
+  face, furosL, furosC + as 6 fichas. Hash das 6 fichas idêntico antes/depois
+  da remoção (`6515576e…`). (Este commit.)
 
 Commits até aqui (do mais recente pro mais antigo):
 
+- (este commit) — Remove a nativa bolsaCon coberta pela ficha bolsaFinal e atualiza DIARIO/CLAUDE
+- `982f09e` — Converte a bolsa conica em ficha bolsaFinal: 2 modos de calculo, espelhamento G51.1 e X de recuo automatico
+- `d7c4cb1` — Motor: template de ficha aceita linha condicional {quando, l} no interpretador
+- `ddbd6e0` — Atualiza DIARIO.md e CLAUDE.md: campos condicionais/exibidos, direcao Sinumerik e decisoes 7-8
 - `987d94f` — Passo 4: escareado helicoidal com seletor Calcular por de 3 modos e Conferencia
 - `a4b389f` — Passo 3: campos condicionais, rebuild no seletor e Conferencia (saidas) no montador
 - `cbc22b0` — Passo 2: campos condicionais, rebuild no seletor e Conferencia (saidas) no estudio
@@ -156,11 +186,11 @@ Commits até aqui (do mais recente pro mais antigo):
 
 ## Onde paramos
 
-O motor suporta **campos condicionais** (seletor `sel` + `quando`) e
-**campos exibidos** (`saidas` de conferência), nos dois apps. O escareado
-helicoidal já usa os 3 modos de cálculo com Conferência. Restam no motor
-4 nativas: **face, bolsaCon, furosL e furosC** — candidatas a conversão
-quando o Leo trouxer os programas anotados.
+O motor suporta campos condicionais, campos exibidos e **linha condicional
+no template**, nos dois apps. A bolsa cônica virou a ficha `bolsaFinal`
+(família `estrategias_bolsa.json`) e a nativa foi aposentada. Restam no
+motor 3 nativas: **face, furosL e furosC** — as demais viraram ficha.
+Candidatas a conversão quando o Leo trouxer os programas anotados.
 
 ---
 
@@ -170,7 +200,7 @@ O interpretador, os campos condicionais e os campos exibidos **já
 existem** — o salto planejado aqui virou realidade. Próximos alvos
 possíveis:
 
-- **Converter as nativas restantes** (face, bolsaCon, furosL, furosC) pelo
+- **Converter as nativas restantes** (face, furosL, furosC) pelo
   método de anotação, quando o Leo trouxer os programas anotados.
 - **Sinumerik como camada de saída** (direção de produto abaixo).
 
@@ -344,3 +374,12 @@ avisos) das fichas atuais com defaults **antes e depois** e comparar por
 hash — **idêntico byte a byte**. Foi assim nos passos 1–4 dos campos
 condicionais e é assim que fica. Diferença esperada tem que ser explicável
 linha a linha (como na correção de fronteira do canal raiado).
+
+### 9. Campo sempre calculável por segurança vira DERIVADA, não input
+
+Quando um valor pode ser calculado com segurança a partir dos outros campos
+e da ferramenta ativa (ex.: o X de recuo da bolsa final,
+`xRecuo = xFinRef - (20 + diam/2)`), ele **deve** ser derivada automática —
+nunca input. O operador não digita: **confere** pelo mostrador da seção
+`"saidas"` (Conferência). Digitar o que a ficha sabe calcular é convite a
+erro de dedo — e, no caso do recuo, a fresa dentro da parede.

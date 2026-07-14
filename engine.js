@@ -126,80 +126,6 @@ const DEFS = {
     }
   },
 
-  /* ---------------- BOLSA CÔNICA (macro Bolsa_Final) ---------------- */
-  bolsaCon:{
-    nome:"Bolsa cônica", sub:"rampa em X · macro Bolsa_Final", cor:"var(--green)", hex:0x3fe0b0,
-    params:[
-      {k:"x8",l:"X fora da peça (#8)",d:85,s:1,u:"mm"},
-      {k:"y9",l:"Meio comprimento Y (#9)",d:61,s:1,u:"mm"},
-      {k:"r5",l:"Raio do Ø interno (#5)",d:100,s:1,u:"mm"},
-      {k:"ang",l:"Ângulo da bolsa (#7)",d:16,s:0.5,u:"°"},
-      {k:"prof",l:"Z final (#4)",d:28,s:0.5,u:"mm"},
-      {k:"ap",l:"Incremento (#1)",d:0.25,s:0.05,u:"mm"},
-      {k:"f",l:"Avanço F",d:2000,s:50,u:"mm/min"},
-      {k:"esp",l:"Espelhar para a bolsa oposta (G51.1 X0)",chk:true,d:false},
-    ],
-    warn(p,c,d){ const w=[];
-      const queda=p.prof*Math.tan(p.ang*Math.PI/180);
-      if(p.r5-queda<=0) w.push("X da parede zera antes do Z final: reduza o ângulo ou o Z final.");
-      if(p.x8 >= p.r5-queda-d/2) w.push("X de recuo (#8) invade a parede na profundidade final — deixe folga de raio da ferramenta + segurança (o macro original usa ~20 mm).");
-      w.push("Atenção — zero desta operação segue o macro Bolsa_Final: X centro, Y centro, Z na JUNÇÃO (zerar o X pelo X final na profundidade final da bolsa).");
-      return w; },
-    gerar(p,c,nb,d){
-      const L=[];
-      L.push(`(ZERO: X CENTRO / Y CENTRO / Z NA JUNCAO)`);
-      L.push(`(ZERAR O X COM O VALOR DO X FINAL NA PROFUNDIDADE FINAL DA BOLSA)`);
-      if(p.esp) L.push(`G51.1X0.(ESPELHAMENTO PARA BOLSA OPOSTA)`);
-      L.push(`#8=${fnum(p.x8)}(X DE POSICIONAMENTO FORA DA PECA)`);
-      L.push(`#9=${fnum(p.y9)}(METADE DO COMPRIMENTO DA BOLSA)`);
-      L.push(`G0X[#8]Y[#9](POSICIONAMENTO INICIAL)`);
-      L.push(`#1=${fnum(p.ap)}(INCREMENTO)`);
-      L.push(`#2=0(Z INICIAL)`);
-      L.push(`#7=${fnum(p.ang)}(ANGULO DA BOLSA)`);
-      L.push(`#4=${fnum(p.prof)}(Z FINAL)`);
-      L.push(`#5=${fnum(p.r5)}(RAIO DO DIAMETRO INTERNO)`);
-      L.push(`N${nb+10}#2=#1+#2(Z + INCREMENTO)`);
-      L.push(`#3=#2*TAN[#7](INCREMENTO DA RAMPA ATE O X FINAL)`);
-      L.push(`#6=#5-#3(X INICIAL = RAIO - #3)`);
-      L.push(`IF[#2GT#4]GOTO${nb+20}(LOOPING ATE O Z FINAL)`);
-      L.push(`G0Z-[#2]`);
-      L.push(`G1X[#6]F${fnum(p.f)}`);
-      L.push(`G1Y-[#9]`);
-      L.push(`G1X[#8]`);
-      L.push(`#2=#1+#2`);
-      L.push(`#3=#2*TAN[#7]`);
-      L.push(`#6=#5-#3`);
-      L.push(`IF[#2GT#4]GOTO${nb+20}(LOOPING ATE O Z FINAL)`);
-      L.push(`G0Z-[#2]`);
-      L.push(`G1X[#6]F${fnum(p.f)}`);
-      L.push(`G1Y[#9]`);
-      L.push(`G1X[#8]`);
-      L.push(`GOTO${nb+10}`);
-      L.push(`N${nb+20}G0Z2.`);
-      if(p.esp) L.push(`G50.1(CANCELA ESPELHAMENTO)`);
-      return L;
-    },
-    volume(p,c,d){
-      const queda=p.prof*Math.tan(p.ang*Math.PI/180);
-      const xParedeFundo=Math.max(0.5, p.r5-queda);
-      function cunha(sinal){
-        const sh=new THREE.Shape();
-        sh.moveTo(sinal*p.x8, 0);
-        sh.lineTo(sinal*p.r5, 0);
-        sh.lineTo(sinal*xParedeFundo, -p.prof);
-        sh.lineTo(sinal*p.x8, -p.prof);
-        sh.closePath();
-        const g=new THREE.ExtrudeGeometry(sh,{depth:2*p.y9,bevelEnabled:false});
-        g.translate(0,0,-p.y9);
-        return new THREE.Mesh(g);
-      }
-      if(!p.esp) return cunha(1);
-      const grp=new THREE.Group();
-      grp.add(cunha(1)); grp.add(cunha(-1));
-      return grp;
-    }
-  },
-
   /* ---------------- FURAÇÃO EM LINHA ---------------- */
   furosL:{
     nome:"Furos em linha", sub:"ciclo G83 / G81", cor:"var(--violet)", hex:0xb388ff,
@@ -295,7 +221,7 @@ const DEFS = {
   },
 };
 
-const ORDEM = ["face","bolsaCon","furosL","furosC"];
+const ORDEM = ["face","furosL","furosC"];
 
 /* ============================================================
    MACROS PERSONALIZADOS (cadastrados pelo usuário)

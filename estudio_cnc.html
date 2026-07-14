@@ -833,7 +833,6 @@ function geoInfo(b){
   if(t==="face")      return {kind:"rect", cx:0,   cy:0,   w:p.cx2,  h:p.cy2,  mov:false, area:true};
   if(t==="furosC")    return {kind:"furosC", cx:p.cx,cy:p.cy,r:p.dc/2, mov:true};
   if(t==="furosL")    return {kind:"furosL", mov:true};
-  if(t==="bolsaCon")  return {kind:"wedge", mov:false};
   if(("cx" in p)&&("cy" in p)) return {kind:"pin", cx:p.cx,cy:p.cy, mov:true};
   return {kind:"chip", mov:false};
 }
@@ -931,19 +930,6 @@ function desenhaElem(b,i,c){
     }
     if(sel) s+=etq((p.x0+xF)/2,(Math.max(p.y0,yF)),`${n}× Ø${fnum(p.dia)}`);
   }
-  else if(g.kind==="wedge"){
-    const p=b.p;
-    function lado(sinal){
-      const xa=Math.min(sinal*p.x8,sinal*p.r5), xb=Math.max(sinal*p.x8,sinal*p.r5);
-      let r=`<rect data-uid="${b.uid}" x="${w2sx(xa)}" y="${w2sy(p.y9)}" width="${(xb-xa)*view.k}" height="${2*p.y9*view.k}" rx="3"
-          fill="${cor}" fill-opacity="${sinal===1?fo:0.08}" stroke="${cor}" stroke-width="${sinal===1?sw:1}"
-          ${sinal===-1?'stroke-dasharray="5 5"':''} style="cursor:pointer"/>`;
-      return r;
-    }
-    s+=lado(1);
-    if(p.esp) s+=lado(-1);
-    if(sel) s+=etq((p.x8+p.r5)/2, p.y9, `X ${fnum(p.x8)} → ${fnum(p.r5)} · ±${fnum(p.y9)}`);
-  }
   else if(g.kind==="pin"){
     s+=`<g ${base}>
       <circle cx="${w2sx(g.cx)}" cy="${w2sy(g.cy)}" r="11" fill="${cor}" fill-opacity="${sel?0.9:0.55}"/>
@@ -976,11 +962,6 @@ function desenhaHandles(b){
     const n=Math.max(2,Math.round(p.n));
     s+=hUm(b.uid,"a", p.x0, p.y0);
     s+=hUm(b.uid,"b", p.x0+p.ix*(n-1), p.y0+p.iy*(n-1));
-  }
-  else if(g.kind==="wedge"){
-    s+=hUm(b.uid,"e", p.r5, 0);
-    s+=hUm(b.uid,"w", p.x8, 0);
-    s+=hUm(b.uid,"n", (p.x8+p.r5)/2, p.y9);
   }
   return s;
 }
@@ -1072,11 +1053,6 @@ function aplicarHandle(b,h,wx,wy){
       p.ix=snap10((wx-p.x0)/(n-1)); p.iy=snap10((wy-p.y0)/(n-1));
     }
     return;
-  }
-  if(t==="bolsaCon"){
-    if(h==="e") p.r5=mm(wx);
-    if(h==="w") p.x8=snap(wx);
-    if(h==="n") p.y9=mm(ax(wy));
   }
 }
 
