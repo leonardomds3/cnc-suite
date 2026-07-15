@@ -353,6 +353,7 @@ let ESTRATEGIAS = {};
 const FN_FICHA={
   TAN:x=>Math.tan(x*Math.PI/180),
   ATAN:x=>Math.atan(x)*180/Math.PI,
+  SQRT:Math.sqrt,
 };
 function avaliarExpr(expr, ctx){
   const s=String(expr).replace(/\s+/g,"");
