@@ -496,3 +496,27 @@ Nenhuma validação de máquina. file:// continua proibido.
 Após revisão e aprovação: aplicar engine.js e estes registros, conferir
 somente os arquivos aprovados e commitar. Envio ao GitHub depende de nova
 autorização. Estratégias locais e artefatos de revisão ficam fora do commit.
+
+## 2026-09-12 — Aviso de passo Z não positivo no canal aberto simples
+
+Proposta em revisao-ap-zero: acrescentar à ficha canalAbertoSimples a regra
+passoZ <= 0, com aviso para ajustar o AP porque o laço não avança até a
+profundidade. Fonte alterada em cópia: estrategias_canal.json. estrategias.js
+regenerado a partir dos objetos das famílias, com união conferida.
+Nenhum template, movimento, valor padrão ou regra do motor foi alterado.
+A geração continua disponível, conforme a política de avisos sem bloqueio.
+
+Testes do assistente: oito casos com zero, negativo e positivos, incluindo
+valores em texto. Programas idênticos antes/depois em todos os casos;
+somente entradas não positivas recebem o aviso adicional. Códigos e avisos
+dos defaults das sete fichas preservados, SHA-256:
+255af6f34aabf9f835d44eaa71c52529bd02e2caf6747865b4dfb21389653039.
+
+Navegador via HTTP nas duas cópias: AP=0 exibiu o aviso e manteve programa
+de 38 linhas gerado. No Montador, aviso desapareceu ao voltar para AP=1.
+Nenhum erro/aviso de console capturado nos ensaios. Os novos testes foram
+executados pelo assistente, não relatados pelo operador. Sem teste de máquina.
+
+Diffs e evidências em revisao-ap-zero. Após aprovação, aplicar e commitar
+somente estrategias_canal.json, estrategias.js, DIARIO.md e STATUS.md.
+Push separado. Avisos do escareado e demais achados permanecem para outra entrega.

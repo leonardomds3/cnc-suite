@@ -80,3 +80,14 @@ preservados. Estúdio e Montador conferidos via HTTP; reordenação e retirada d
 aviso verificadas no Montador. Detalhes e limites no registro de 12/09 do DIARIO.
 Entrega aguardando aprovação para aplicação e commit de engine.js, DIARIO.md
 e STATUS.md. Sem autorização de push. Outros arquivos locais preservados.
+
+## Entrega em revisão — AP zero, 12/09/2026
+
+Canal aberto simples: proposta de aviso para passoZ <= 0, sem bloquear
+geração ou alterar o template. JSON de canal é a fonte; JS derivado regenerado.
+Oito casos automatizados aprovados; código preservado; defaults das sete
+fichas mantêm o hash anterior. Aviso e geração conferidos nas duas interfaces
+via HTTP. No Montador, retorno a AP=1 removeu o aviso. Sem validação de máquina.
+Revisar revisao-ap-zero/LEIA-ME.md e os quatro diffs. Aplicação e commit
+aguardam aprovação; envio ao GitHub depende de autorização separada.
+Escareado helicoidal e demais avisos ausentes continuam fora desta entrega.

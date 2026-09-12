@@ -36,6 +36,7 @@
         "xAprox": "comp/2 + rf + folga"
       },
       "avisos": [
+        { "se": "passoZ <= 0",          "msg": "PASSO Z (AP) DEVE SER MAIOR QUE ZERO - AJUSTE O CAMPO (O LACO NAO AVANCA ATE A PROFUNDIDADE)" },
         { "se": "larg <= diam",       "msg": "LARGURA MENOR OU IGUAL AO DIAMETRO DA FRESA" },
         { "se": "offY > rf",          "msg": "EXPANSAO POR PAREDE MAIOR QUE O RAIO DA FRESA - USE CANAL COM EXPANSAO" },
         { "se": "passoZ > diam/2",    "msg": "PASSO Z MAIOR QUE MEIO DIAMETRO DA FRESA" }
