@@ -1,0 +1,11 @@
+(=== OPERACAO: nome ===)
+(PROPOSITO: o que faz e quando se usa)
+(CRITICO: o que nunca pode mudar, o coracao da operacao)
+(EDITAVEL: os parametros que o usuario ajusta)
+(FIXO: valores travados e por que)
+(CUIDADOS: avisos, limites, o que da errado se exagerar)
+
+@ED = editável (vira campo de input)
+@FX = fixo (trava, não vira campo)
+@CR = crítico (lógica não pode ser tocada)
+Linha sem marca = mantida como está, não mexo

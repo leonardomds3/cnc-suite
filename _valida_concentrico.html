@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Validação — canalRaiadoConcentrico × 1-PESCADOR.NC</title></head>
+<body>
+<pre id="out">carregando…</pre>
+<script src="engine.js?v=cc1"></script>
+<script src="estrategias.js?v=cc1"></script>
+<script>
+(async function(){
+try{
+  const RF=12.5, RA=214.9, HC=71.1, RFURO=110, XSAIDA=229.5;
+  let out="";
+
+  /* ficha com defaults, ferramenta O25 */
+  const p={}; DEFS.canalRaiadoConcentrico.params.forEach(i=>p[i.k]=i.d);
+  const c={seg:10,bx:200,by:140,bz:50};
+  const linhas=DEFS.canalRaiadoConcentrico.gerar(p,c,100,25);
+  const gerado=["#26=10."].concat(linhas).join("\n");
+  const rF=execNC(gerado);
+  out+="AVISOS execNC ficha: "+JSON.stringify(rF.avisos||[])+"\n";
+
+  /* gabarito: so a secao DESBASTE */
+  let nc=await (await fetch("programas_anotados/1-PESCADOR.NC")).text();
+  nc=nc.slice(0, nc.indexOf("(-------------------------------)"));
+  const rC=execNC(nc);
+
+  function analisa(segs){
+    const niv={}, plg=[], rmp=[];
+    segs.forEach(s=>{
+      if(s.rapid) return;
+      const dz=s.bz-s.az;
+      if(Math.abs(dz)<1e-9 && s.bz<0){
+        const k=(-s.bz).toFixed(1);   /* nivel com 1 casa: casa grades levemente defasadas */
+        if(!niv[k]) niv[k]={xp:-1e9,xn:1e9};
+        [[s.ax],[s.bx]].forEach(([x])=>{
+          if(x>niv[k].xp) niv[k].xp=x;
+          if(x<niv[k].xn) niv[k].xn=x;
+        });
+      } else if(dz<0 && Math.abs(s.bx-s.ax)<1e-9 && Math.abs(s.by-s.ay)<1e-9){
+        plg.push({x:s.ax,y:s.ay,z:-s.bz});
+      } else if(dz<0){
+        rmp.push({z:-s.bz,dx:s.bx-s.ax,dy:s.by-s.ay});
+      }
+    });
+    return {niv,plg,rmp};
+  }
+  const F=analisa(rF.segs), C=analisa(rC.segs);
+  const zF=Object.keys(F.niv).map(Number).sort((a,b)=>a-b);
+  const zC=Object.keys(C.niv).map(Number).sort((a,b)=>a-b);
+
+  /* A) niveis */
+  out+="\n(A) NIVEIS DE Z\n";
+  out+="  ficha : "+zF.length+" niveis, "+zF[0]+" a "+zF[zF.length-1]+"\n";
+  out+="  CAM   : "+zC.length+" niveis, "+zC[0]+" a "+zC[zC.length-1]+"\n";
+
+  /* B) limites de X por nivel: ficha x modelo e ficha x CAM */
+  let eArcoMax=0, eArcoOnde=0, nClamp=0;
+  zF.forEach(z=>{
+    const xp=F.niv[z.toFixed(1)].xp;
+    if(Math.abs(xp-XSAIDA)<0.01){ nClamp++; return; }
+    const alvo=Math.sqrt(RA*RA-(z+HC)*(z+HC))-RF;
+    const e=Math.abs(xp-alvo);
+    if(e>eArcoMax){eArcoMax=e; eArcoOnde=z;}
+  });
+  out+="\n(B) LIMITES DE X\n";
+  out+="  ficha x MODELO (+X, aresta no arco R214.9 c/ centro +71.1): desvio max "
+      +eArcoMax.toFixed(3)+" mm (z="+eArcoOnde+"); niveis clampados no xSaida: "+nClamp+"\n";
+  let dArc=[], dTopoN=[];
+  zF.forEach(z=>{
+    let melhor=null, dz=1e9;
+    zC.forEach(zc=>{ const d=Math.abs(zc-z); if(d<dz){dz=d; melhor=zc;} });
+    if(dz>0.16 || melhor===null) return;
+    const f=F.niv[z.toFixed(1)], g=C.niv[melhor.toFixed(1)];
+    if(z>15){ dArc.push(Math.abs(f.xp-g.xp)); }
+    else { dTopoN.push(f.xn-g.xn); }
+  });
+  dArc.sort((a,b)=>a-b);
+  out+="  ficha x CAM (+X, regiao do arco z>15, "+dArc.length+" niveis casados): "
+      +"mediana "+(dArc[Math.floor(dArc.length/2)]||0).toFixed(3)
+      +"  max "+(dArc[dArc.length-1]||0).toFixed(3)+" mm\n";
+  out+="  topo -X (divergencia esperada ~8.6): ficha-CAM medio "
+      +(dTopoN.reduce((a,b)=>a+b,0)/(dTopoN.length||1)).toFixed(2)+" mm em "+dTopoN.length+" niveis\n";
+
+  /* C) troca de fase */
+  const ultMrgF=Math.max(...F.plg.filter(m=>Math.abs(m.x)<200).map(m=>m.z));
+  const priRmpF=Math.min(...F.rmp.filter(r=>Math.abs(r.dx)>5).map(r=>r.z));
+  const ultMrgC=Math.max(...C.plg.filter(m=>Math.abs(m.x)<200).map(m=>m.z));
+  out+="\n(C) TROCA DE FASE\n";
+  out+="  ficha: ultimo mergulho z="+ultMrgF.toFixed(3)+", primeira rampa z="+priRmpF.toFixed(3)+" (zTroca teorico 104.23)\n";
+  out+="  CAM  : ultimo mergulho z="+ultMrgC.toFixed(3)+", rampas a partir de z=104.014\n";
+
+  /* D) mergulho sempre sobre o vazio com folga — so os da fase 1 */
+  let margMin=1e9, margOnde=null;
+  const plgF1=F.plg.filter(m=>m.z<104.2), plgOutros=F.plg.filter(m=>m.z>=104.2);
+  plgF1.forEach(m=>{
+    const vazio=Math.sqrt(Math.max(0,RFURO*RFURO-m.z*m.z-m.y*m.y));
+    const marg=vazio-(Math.abs(m.x)+RF);
+    if(marg<margMin){margMin=marg; margOnde=m;}
+  });
+  out+="\n(D) MERGULHOS (fase 1: "+plgF1.length+")\n";
+  out+="  folga minima da aresta ate a borda do vazio (esfera R110): "+margMin.toFixed(3)+" mm (esperado >= 5)\n";
+  if(margOnde) out+="  pior caso: X="+margOnde.x.toFixed(2)+" Y="+margOnde.y.toFixed(2)+" z="+margOnde.z.toFixed(2)+"\n";
+  out+="  descidas verticais FORA da fase 1 (rampa degenerada com #8~0): "+plgOutros.length+"\n";
+  plgOutros.forEach(m=>out+="    X="+m.x.toFixed(3)+" Y="+m.y.toFixed(2)+" ate z="+m.z.toFixed(3)+"\n");
+  /* rampas rasas da fase 2: comprimento em X de cada rampa nos ultimos niveis */
+  const rmpFundo=F.rmp.filter(r=>r.z>142).map(r=>Math.abs(r.dx).toFixed(2));
+  out+="  comprimento em X das rampas com z>142: ["+rmpFundo.join(", ")+"]\n";
+
+  /* E) amostra de niveis lado a lado */
+  out+="\n(E) AMOSTRA (aresta +X = maxX+12.5) ficha x CAM x modelo\n";
+  [0.3, 15.3, 60.3, 90.3, 104.4, 120.3, 140.1].forEach(z=>{
+    const f=F.niv[z.toFixed(1)];
+    let melhor=null, dz=1e9;
+    zC.forEach(zc=>{const d=Math.abs(zc-z); if(d<dz){dz=d;melhor=zc;}});
+    const g=(dz<0.16)?C.niv[melhor.toFixed(1)]:null;
+    const alvo=Math.sqrt(RA*RA-(z+HC)*(z+HC));
+    out+="  z="+z.toFixed(1).padStart(6)+": ficha "+(f?(f.xp+RF).toFixed(2):"-")
+        +"  CAM "+(g?(g.xp+RF).toFixed(2):"-")
+        +"  modelo "+alvo.toFixed(2)+"\n";
+  });
+
+  document.getElementById("out").textContent=out;
+}catch(e){ document.getElementById("out").textContent="ERRO: "+e.message+"\n"+e.stack; }
+})();
+</script>
+</body>
+</html>
