@@ -299,8 +299,15 @@ function registrarCustom(id, raw){
             if(k==="RF")   return fnum(d/2);
             return (k in p) ? fnum(p[k]) : m;
           });
-          l=l.replace(/\bN(\d{1,2})\b/g,(m,n)=>"N"+(nb+ +n));
-          l=l.replace(/GOTO(\d{1,2})\b/g,(m,n)=>"GOTO"+(nb+ +n));
+          // Renumera apenas codigo; preserva comentarios e rotulos longos.
+          let inicio=true;
+          l=l.split(/(\([^)]*(?:\)|$)|;.*$)/).map((trecho,i)=>{
+            if(i%2) return trecho;
+            if(inicio) trecho=trecho.replace(/^(\s*)N(\d{1,2})(?![\d.])/,
+              (m,esp,n)=>esp+"N"+(nb+ +n));
+            if(trecho.trim()) inicio=false;
+            return trecho.replace(/GOTO(\d{1,2})\b/g,(m,n)=>"GOTO"+(nb+ +n));
+          }).join("");
           return l;
         }));
     },

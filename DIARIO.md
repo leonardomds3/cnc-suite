@@ -9,6 +9,17 @@ bancada pra ninguém perder o fio.
 
 ## Como trabalhamos
 
+### Acesso ao navegador — decisão de Leonardo em 2026-09-11
+
+- Leonardo proíbe abrir URLs `file://`. Não tentar esse acesso nem contornar a proibição.
+- Usar somente o servidor HTTP iniciado pelo Leonardo em `C:\Projetos\cnc-suite`
+  com `py -m http.server 8000`.
+- Estúdio: `http://localhost:8000/estudio_cnc.html`.
+- Montador: `http://localhost:8000/montador_macro_cnc_2.html`.
+- Se o servidor não estiver disponível, informar o problema; não substituir por `file://`.
+- Esta decisão substitui instruções anteriores de teste por duplo clique ou `file://`.
+  A abertura por arquivo local não é uma pendência de teste autorizada nesta entrega.
+
 O método é sempre o mesmo, e ele importa tanto quanto o código:
 
 - **Planejar antes de agir.** Primeiro a gente entende e combina o rumo. Só depois mexe.
@@ -185,6 +196,80 @@ Commits até aqui (do mais recente pro mais antigo):
 ---
 
 ## Onde paramos
+
+### 2026-09-11 — Correção de rótulos compactos e conferência documental
+
+- Leonardo revisou a proposta; a correção de `registrarCustom` está aplicada
+  localmente em `engine.js`, ainda sem commit. Com base 100, `N10G0X0`
+  e `GOTO10` resultam em `N110G0X0` e `GOTO110`.
+- A renumeração preserva comentários e rótulos longos; a substituição de
+  parâmetros permanece. Avisos continuam informativos, sem bloquear geração.
+- Evidência automatizada anterior do assistente: `revisao-renumeracao/resultado.json`
+  registra Node.js v24.19.0, oito casos aprovados e três blocos com seis
+  rótulos únicos e saltos correspondentes nos casos ensaiados.
+  Os códigos e avisos das seis fichas auditadas mantiveram o SHA-256
+  `7c2ab4e60335e6af70924c020575aecaadeffe5eefb8f0f1a42c900850c4de96`.
+  As sete fichas locais mantiveram o SHA-256
+  `255af6f34aabf9f835d44eaa71c52529bd02e2caf6747865b4dfb21389653039`.
+  Hashes individuais e sincronismo JSON/JS constam no mesmo relatório.
+- Testes de navegador relatados por Leonardo: nas duas interfaces, rótulo
+  compacto e GOTO renumerados, comentários preservados, parâmetros
+  substituídos e nenhum erro ou aviso no console. Este item registra o
+  relato do operador, não uma nova execução nesta conferência documental.
+- Limitação conhecida: um `N110` original permanece e pode colidir com
+  o `N110` gerado de `N10`. A correção não elimina todas as colisões.
+  O tratamento desse caso será separado, respeitando avisos sem bloqueio.
+- Conferência atual do assistente: pasta ativa `C:/Projetos/cnc-suite`,
+  branch `master`, HEAD `18da56e21f6422b9d2133371a62db0e3ea2c7e9a`.
+  O worktree `C:/Users/leona/.codex/worktrees/3826/cnc-suite` está no mesmo
+  commit, com HEAD destacado. Ambos contêm a correção e alterações locais.
+  Motor, estratégias JS/JSON de canal e diário conferem entre as cópias
+  ao normalizar CRLF/LF; STATUS e resultado.json são idênticos por hash.
+  O motor atual equivale a engine.teste.js após normalizar CRLF/LF.
+  `git diff --check` passou. Nenhuma cópia foi sobrescrita.
+- Alterações anteriores preservadas: estratégias de canal e JS derivado,
+  incluindo a sétima ficha, além dos arquivos locais não versionados.
+  STATUS.md continua não versionado. Não houve commit ou envio nesta
+  sequência; estado remoto e permissão de publicação não foram verificados.
+- Os artefatos históricos foram preservados. LEIA-ME.md e resultado.json
+  retratam a etapa anterior à aplicação. verificar.cjs exige o motor antigo;
+  não foi reexecutado contra o motor corrigido nesta conferência.
+- Pendências registradas antes do ensaio final: exportação .NC, preview 3D
+  e múltiplos blocos. Os resultados posteriores estão no complemento abaixo.
+  A abertura file:// foi proibida por Leonardo e saiu do roteiro autorizado.
+  Testes de software e hashes não validam máquina ou usinagem.
+- Próximo passo: revisar e aplicar os registros, primeiro DIARIO.md,
+  depois STATUS.md. Commit depende de autorização específica e deve
+  conter somente a correção e os registros aprovados, sem incluir a
+  sétima ficha ou outros arquivos locais. Publicação é uma etapa distinta.
+
+### Complemento — ensaio final pelo assistente, via HTTP
+
+- Testes executados agora pelo assistente, separados do relato anterior de
+  Leonardo: cadastro de macro com laço finito, três blocos, geração e preview
+  nas duas interfaces em http://localhost:8000. Seis rótulos distintos:
+  N110/N120, N210/N220, N310/N320; saltos para N110/N210/N310.
+  Comentários preservados; token cx substituído. No Estúdio, X=0/12/24
+  pelo posicionamento automático dos blocos; no Montador, X=0/0/0.
+- Exportação real pelo botão Baixar .NC nas duas interfaces: arquivos
+  encontrados em Downloads e conteúdo integral conferido, com 51 linhas.
+  O observador de downloads do navegador expirou no Estúdio, mas o arquivo
+  foi salvo e confirmado por leitura. Preview mostrou a trajetória; console
+  sem erros/avisos capturados. Isso não valida a trajetória na máquina.
+- Motor atual reensaiado em Node.js v24.19.0: nove casos aprovados,
+  montagem de três blocos e hashes das seis/sete fichas preservados.
+  A colisão com N110 original foi reproduzida e continua fora da correção.
+- Evidências locais em revisao-renumeracao/auditoria-final/: resultado-atual.json,
+  navegador.json e cópias dos dois NC exportados. Artefatos anteriores intactos.
+- Leonardo determinou que todos os testes de navegador usem somente o
+  servidor HTTP que iniciou; file:// é proibido, não uma pendência.
+- Entrega preparada para auditoria: engine.js, DIARIO.md e STATUS.md.
+  Após aprovação desta entrega, aplicar as cópias documentais revisadas,
+  conferir preservação das outras alterações e commitar só esses três arquivos.
+  A autorização de commit é condicionada à aprovação; não há autorização de push.
+  Evidências locais ficam fora do commit proposto. Ainda não houve commit/envio.
+
+O texto abaixo registra o marco anterior da base funcional.
 
 O motor suporta campos condicionais, campos exibidos e **linha condicional
 no template**, nos dois apps. A bolsa cônica virou a ficha `bolsaFinal`
