@@ -2,6 +2,78 @@
 
 Versão: 0.1 · Data: 08/09/2026 · Responsável pelo produto: Leonardo
 
+## Referência visual recebida — 12/09/2026
+
+Imagem escolhida por Leonardo: **Do desenho à Macro B — Visão conceitual do aplicativo**.
+Arquivo preservado em `docs/referencias/conceito-montador-macro-b.jpg`.
+
+![Conceito visual escolhido](referencias/conceito-montador-macro-b.jpg)
+
+### Estrutura do aplicativo
+
+As seis cenas representam etapas de um mesmo aplicativo; não são seis painéis
+que precisam aparecer simultaneamente. O Montador será a base dessa evolução.
+Barra lateral persistente à esquerda: Projetos, Desenho 2D, Parâmetros,
+Planejamento, Simulação e Programa; Configurações no rodapé. Barra superior
+compacta identifica o aplicativo e o projeto ativo. Conteúdo central amplo,
+com ferramentas à esquerda e propriedades à direita conforme a etapa.
+
+| Etapa | Organização e elementos visíveis na referência | Comportamento a construir |
+| --- | --- | --- |
+| Projetos | Biblioteca lateral, busca, cartões com miniatura da peça, nome e revisão; Nova peça e Importar DXF no topo. | Criar, localizar e reabrir projetos; vincular cada revisão ao projeto. Pastas, clientes, dispositivos e lixeira são recursos futuros, não existentes por aparecerem na imagem. |
+| Desenho 2D | Tela quadriculada escura, contorno branco, cotas e eixos ciano; ferramentas de retas, arcos, furos, seleção, mover, copiar, aparar, cota e excluir. Propriedades com unidades, origem e Confirmar geometria. | Desenhar ou importar contornos; conferir unidades e origem antes de usar a geometria. PDF/imagem exige revisão da interpretação. |
+| Medidas vinculadas | Parâmetros numéricos à esquerda, desenho central, vínculos à direita; dimensão selecionada em amarelo, botão Recalcular geometria. | Atualizar geometria segundo vínculos explícitos. Manter proporções não significa impor escala uniforme a todo projeto. |
+| Planejamento | Lista ordenada de operações à esquerda, peça e trajetórias ao centro, ferramenta e parâmetros de corte à direita. | Reutilizar a sequência, ferramentas e fichas JSON do Montador. Adicionar operações e conferir seus parâmetros. |
+| Simulação | Peça em perspectiva com trajetória ciano; informações à esquerda, controles de exibição à direita; reprodução e progresso embaixo. | Evoluir primeiro o preview de trajetória. Remoção de material, estimativas de tempo e verificações de fixação exigem implementação e validação próprias. |
+| Programa Macro B | Código à esquerda, tabela de parâmetros à direita; Exportar .NC, Salvar revisão e Ficha de preparação abaixo. | Relacionar parâmetros com sua origem no projeto, revisar e exportar o programa. Alterações feitas na máquina não atualizam automaticamente o projeto. |
+
+### Direção visual
+
+- Fundo azul-marinho quase preto; painéis em tons próximos, separados por bordas finas azuladas.
+- Azul/ciano nos botões primários, etapa selecionada, cotas e trajetórias.
+- Texto principal branco e texto secundário cinza claro; amarelo para seleção
+  geométrica, verde para confirmação e âmbar para avisos.
+- Controles compactos, cantos discretamente arredondados e ícones simples.
+- Tipografia sem serifa na interface; fonte monoespaçada para código e números
+  quando favorecer alinhamento. A imagem não determina uma família tipográfica exata.
+- A área de desenho/peça deve ter destaque. Nos quadros com propriedades,
+  ela ocupa mais espaço que cada painel lateral; proporções finais dependem
+  da resolução. Não copiar textos minúsculos da montagem conceitual.
+- O título grande e os números 01–06 pertencem à apresentação do conceito;
+  não são uma exigência de cabeçalho dentro do aplicativo.
+
+### Critérios para conferir o layout
+
+Uma etapa ativa por vez, com navegação consistente; projeto ativo identificável;
+área principal legível; propriedades próximas do objeto selecionado; ações
+de confirmar, revisar e exportar facilmente localizáveis. A imagem será a
+referência de comparação visual, com ajustes de legibilidade para uso real.
+Adaptação para telas menores ainda precisa de especificação; a referência
+mostra composição de desktop e não define um layout móvel completo.
+
+### Limites técnicos e ordem de implementação
+
+As medidas, códigos, ferramentas, origens, revisões, datas e tempos da imagem
+são ilustrativos. Não copiar como defaults ou regras de usinagem. Em especial,
+não usar a opção de origem mostrada para mudar o zero atual silenciosamente,
+nem tratar rótulos de comandos ilustrativos como especificação Fanuc.
+
+Preservar engine.js compartilhado, fontes JSON por família e programas anotados.
+O Estúdio fica arquivado conceitualmente, sem exclusão e sem testes rotineiros.
+Implementar e testar somente o Montador via HTTP; manter testes relevantes do motor.
+As instruções históricas de testar ambas as interfaces ficam substituídas.
+
+Sequência: estabilizar os avisos pendentes; criar a estrutura visual e navegação
+do Montador; integrar o fluxo já funcional de Planejamento e Programa; acrescentar
+Projetos/revisões; desenvolver geometria e vínculos; depois importações e simulação
+avançada. Recursos ainda ausentes devem ser identificados como planejados.
+Não apresentar controles inoperantes como funções prontas.
+
+O plano antigo abaixo permanece como visão e histórico. Esta seção prevalece
+quanto à interface ativa, aparência e testes. A política de avisos informativos
+sem bloqueio continua em vigor, apesar de propostas antigas de bloqueio.
+
+
 ## 1. Comece por aqui
 
 Você define como o app deve funcionar na oficina. A IA organiza a documentação, implementa e testa. Você não precisa aprender programação para aprovar uma tela ou conferir se uma operação corresponde ao que pediu.

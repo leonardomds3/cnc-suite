@@ -9,6 +9,17 @@ bancada pra ninguém perder o fio.
 
 ## Como trabalhamos
 
+### Interface ativa e conceito visual — decisão de 12/09/2026
+
+Desenvolvimento e testes de navegador somente no Montador. O Estúdio fica
+como conceito preservado; não excluir seus arquivos. Esta decisão substitui
+a rotina anterior de testes nas duas interfaces. Testes do motor continuam.
+Imagem escolhida por Leonardo salva em docs/referencias/conceito-montador-macro-b.jpg.
+O plano docs/PLANO-PROFISSIONAL-CNC-MACRO-B.md detalha as seis etapas,
+organização visual, limites técnicos e sequência incremental. O layout atual
+do Montador será evoluído para esse conceito. Usar somente HTTP.
+
+
 ### Acesso ao navegador — decisão de Leonardo em 2026-09-11
 
 - Leonardo proíbe abrir URLs `file://`. Não tentar esse acesso nem contornar a proibição.

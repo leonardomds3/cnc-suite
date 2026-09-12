@@ -4,6 +4,14 @@ Atualizado em: 2026-09-11
 Base auditada: 18da56e21f6422b9d2133371a62db0e3ea2c7e9a (master)
 Etapa: correção compacta aplicada localmente; registros em revisão, sem commit.
 
+## Direção atual — 12/09/2026
+
+Interface ativa: Montador; desenvolvimento e testes de navegador somente nele.
+Estúdio preservado como conceito, fora da rotina de testes. Motor e JSONs mantidos.
+Conceito visual recebido: docs/referencias/conceito-montador-macro-b.jpg.
+Especificação visual e seis etapas detalhadas no plano profissional em docs/.
+A imagem define a direção visual, não regras de usinagem nem funções já prontas.
+
 ## Antes de trabalhar
 
 Ler CLAUDE.md e DIARIO.md. Este arquivo resume o estado e não substitui as regras.
