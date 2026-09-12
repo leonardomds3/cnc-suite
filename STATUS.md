@@ -70,3 +70,13 @@ excluindo a sétima ficha, evidências locais e outros arquivos não relacionado
 Publicação exige conferência remota e autorização em etapa distinta.
 Os artefatos de teste anteriores permanecem históricos; verificar.cjs espera
 engine.js anterior à correção e não deve ser reexecutado diretamente no atual.
+
+## Entrega em revisão — 12/09/2026
+
+Aviso informativo para rótulos N duplicados: proposta em revisao-colisoes/engine.diff.
+Detecta colisões internas e entre blocos, sem mudar o programa ou bloquear geração.
+Dez cenários automatizados e colisão com nativa aprovados; hashes das sete fichas
+preservados. Estúdio e Montador conferidos via HTTP; reordenação e retirada do
+aviso verificadas no Montador. Detalhes e limites no registro de 12/09 do DIARIO.
+Entrega aguardando aprovação para aplicação e commit de engine.js, DIARIO.md
+e STATUS.md. Sem autorização de push. Outros arquivos locais preservados.

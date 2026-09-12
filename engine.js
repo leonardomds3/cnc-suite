@@ -548,6 +548,28 @@ function gerarPrograma(){
   return L.join("\n");
 }
 
+// Confere os rotulos efetivamente emitidos, com a base real de cada bloco.
+// Apenas informa a colisao: nao altera nem bloqueia o programa.
+function avisosRotulosDuplicados(c){
+  const rotulos=new Map();
+  SEQ.forEach((b,i)=>{
+    DEFS[b.tipo].gerar(b.p,c,(i+1)*100,b.p.td).forEach((linha,j)=>{
+      const codigo=linha.replace(/\([^)]*(?:\)|$)|;.*$/g,"")
+        .replace(/\s+/g,"").toUpperCase();
+      const m=codigo.match(/^N(\d+)(?![\d.])/);
+      if(!m) return;
+      const n=m[1].replace(/^0+(?=\d)/,"");
+      if(!rotulos.has(n)) rotulos.set(n,[]);
+      rotulos.get(n).push(`bloco ${i+1}, linha ${j+1}`);
+    });
+  });
+  const avisos=[];
+  rotulos.forEach((locais,n)=>{
+    if(locais.length>1) avisos.push(`Rótulo N${n} repetido: ${locais.join("; ")}. Revise os rótulos e os GOTO correspondentes antes de usar o programa.`);
+  });
+  return avisos;
+}
+
 function coletarWarns(){
   const c=cfg(); const out=[];
   if(SEQ.length===0) return out;
@@ -563,6 +585,7 @@ function coletarWarns(){
     if(b.p.fz!==undefined && b.p.f!==undefined && b.p.f>0 && b.p.fz > b.p.f*0.55)
       out.push(`Bloco ${i+1} (${D.nome}): F de mergulho (${b.p.fz}) acima de 50% do F de corte (${b.p.f}) — recomendado 30–50%.`);
   });
+  out.push(...avisosRotulosDuplicados(c));
   return out;
 }
 

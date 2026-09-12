@@ -468,3 +468,31 @@ e da ferramenta ativa (ex.: o X de recuo da bolsa final,
 nunca input. O operador não digita: **confere** pelo mostrador da seção
 `"saidas"` (Conferência). Digitar o que a ficha sabe calcular é convite a
 erro de dedo — e, no caso do recuo, a fresa dentro da parede.
+
+## 2026-09-12 — Aviso de colisão de rótulos
+
+Proposta preparada em revisao-colisoes, sem alterar os arquivos originais.
+O motor passa a informar rótulos N repetidos dentro de uma operação ou entre
+operações, usando as linhas geradas e a base real de cada bloco. O aviso
+indica bloco e linha dentro do corpo da operação, não a linha global do NC.
+Não corrige rótulos automaticamente nem bloqueia a geração.
+
+Testes do assistente: dez cenários mais colisão com operação nativa;
+programas preservados nos casos comparados; códigos e avisos das sete fichas
+preservados, SHA-256 255af6f34aabf9f835d44eaa71c52529bd02e2caf6747865b4dfb21389653039.
+Sintaxe e aplicabilidade do diff conferidas. Resultado local: revisao-colisoes/resultado.json.
+
+Navegador via HTTP: Estúdio exibiu aviso e manteve o código gerado no ensaio
+anterior desta proposta. Montador conferido em 12/09 após Leonardo reabrir
+o servidor: colisão interna, atualização após reordenar para colisão entre
+blocos, desaparecimento do aviso ao remover a operação conflitante e geração
+disponível. Nenhum erro/aviso de console capturado nos ensaios concluídos.
+A tentativa com servidor indisponível não foi considerada teste aprovado.
+
+Limites: não verifica destinos GOTO ausentes, subprogramas ou sintaxe completa.
+Executa o gerador de cada bloco mais uma vez ao coletar avisos; não executa NC.
+Nenhuma validação de máquina. file:// continua proibido.
+
+Após revisão e aprovação: aplicar engine.js e estes registros, conferir
+somente os arquivos aprovados e commitar. Envio ao GitHub depende de nova
+autorização. Estratégias locais e artefatos de revisão ficam fora do commit.
