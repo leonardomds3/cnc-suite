@@ -48,6 +48,7 @@
         "rt": "(diamTopoEfetivo - diam)/2"
       },
       "avisos": [
+        { "se": "ap <= 0",          "msg": "PASSO Z (AP) DEVE SER MAIOR QUE ZERO - AJUSTE O CAMPO (O LACO NAO AVANCA ATE A PROFUNDIDADE)" },
         { "se": "diamTopoEfetivo <= diam", "msg": "DIAMETRO DO ESCAREADO MENOR OU IGUAL AO DIAMETRO DA FERRAMENTA" },
         { "se": "angEfetivo >= 90",        "msg": "ANGULO DEVE SER MENOR QUE 90 GRAUS" },
         { "se": "ang <= 0",       "quando": "calcpor != 3", "msg": "ANGULO NAO DEFINIDO OU INVALIDO - AJUSTE O CAMPO" },

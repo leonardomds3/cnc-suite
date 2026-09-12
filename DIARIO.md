@@ -531,3 +531,27 @@ executados pelo assistente, não relatados pelo operador. Sem teste de máquina.
 Diffs e evidências em revisao-ap-zero. Após aprovação, aplicar e commitar
 somente estrategias_canal.json, estrategias.js, DIARIO.md e STATUS.md.
 Push separado. Avisos do escareado e demais achados permanecem para outra entrega.
+
+## 2026-09-12 — Aviso de AP não positivo no escareado helicoidal
+
+Proposta em revisao-ap-escareado: regra ap <= 0 na ficha escareadoHelicoidal,
+informando que o passo deve ser maior que zero. estrategias_escareado.json
+é a fonte; estrategias.js foi regenerado a partir das famílias e conferido.
+Cada diff funcional acrescenta uma linha. Templates, defaults e motor intactos.
+A geração continua disponível, conforme a política de avisos sem bloqueio.
+
+Testes do assistente: 24 casos (oito valores numéricos/textuais em cada um
+dos três modos de cálculo), incluindo zero, negativos e positivos. Programas
+idênticos antes/depois em cada caso; somente AP não positivo ganha o aviso.
+Defaults das sete fichas mantêm códigos e avisos, SHA-256:
+255af6f34aabf9f835d44eaa71c52529bd02e2caf6747865b4dfb21389653039.
+
+Navegador: somente Montador via HTTP. No modo topo + ângulo, AP=0 e -0.1
+exibiram o aviso; AP=0.1 removeu o aviso. Programa continuou gerado com
+36 linhas. Nenhum erro/aviso no console capturado. Estúdio não testado,
+conforme decisão vigente. Não houve validação de máquina, exportação
+ou geometria do preview nesta alteração de aviso.
+
+Após aprovação, aplicar e commitar somente estrategias_escareado.json,
+estrategias.js, DIARIO.md e STATUS.md. Envio ao GitHub depende de autorização.
+As cópias de revisão permanecem locais. Outros achados seguem em entregas próprias.

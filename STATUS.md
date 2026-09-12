@@ -99,3 +99,13 @@ via HTTP. No Montador, retorno a AP=1 removeu o aviso. Sem validação de máqui
 Revisar revisao-ap-zero/LEIA-ME.md e os quatro diffs. Aplicação e commit
 aguardam aprovação; envio ao GitHub depende de autorização separada.
 Escareado helicoidal e demais avisos ausentes continuam fora desta entrega.
+
+## Entrega em revisão — AP do escareado, 12/09/2026
+
+Aviso para ap <= 0 no escareado helicoidal, sem bloqueio e sem alterar template.
+Fonte JSON de escareado; JS derivado regenerado. 24 casos nos três modos
+de cálculo aprovados; código e defaults das sete fichas preservados.
+Montador conferido via HTTP com AP zero, negativo e retorno a 0.1.
+Estúdio fora dos testes. Sem validação de máquina.
+Revisar revisao-ap-escareado/LEIA-ME.md e quatro diffs. Aplicação e commit
+aguardam aprovação; publicação no GitHub depende de autorização separada.
