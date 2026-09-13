@@ -512,45 +512,58 @@ function renderPilha(){
   $("qtd").textContent = SEQ.length ? `· ${SEQ.length} bloco${SEQ.length>1?"s":""}` : "";
   if(!SEQ.length){
     el.innerHTML=`<div class="vazio">Pilha vazia.<br>Toque numa peça acima para começar a montar.</div>`;
-    return;
-  }
-  el.innerHTML="";
-  SEQ.forEach((b,i)=>{
-    const D=DEFS[b.tipo];
-    const ctxB=ctxDoBloco(b.p);
-    const est=ESTRATEGIAS[b.tipo];
-    let confHTML="";
-    if(est && Array.isArray(est.saidas)){
-      const vis=est.saidas.filter(sd=>campoVisivel(sd,ctxB));
-      if(vis.length){
-        const ctxI=interpretarEstrategia(est, b.p, cfg(), 100, b.p.td).ctx;
-        confHTML=`<div class="sub">Conferência</div><div class="grid3">${vis.map(sd=>saidaHTML(sd,ctxI)).join("")}</div>`;
+  } else {
+    el.innerHTML="";
+    SEQ.forEach((b,i)=>{
+      const D=DEFS[b.tipo];
+      const ctxB=ctxDoBloco(b.p);
+      const est=ESTRATEGIAS[b.tipo];
+      let confHTML="";
+      if(est && Array.isArray(est.saidas)){
+        const vis=est.saidas.filter(sd=>campoVisivel(sd,ctxB));
+        if(vis.length){
+          const ctxI=interpretarEstrategia(est, b.p, cfg(), 100, b.p.td).ctx;
+          confHTML=`<div class="sub">Conferência</div><div class="grid3">${vis.map(sd=>saidaHTML(sd,ctxI)).join("")}</div>`;
+        }
       }
-    }
-    const div=document.createElement("div");
-    div.className="bloco"+(b.aberto?"":" fechado")+(SELECIONADO===b.uid?" sel":"");
-    div.style.setProperty("--c",D.cor);
-    div.dataset.uid=b.uid;
-    div.innerHTML=`
-      <div class="bhead">
-        <div class="bnum">${i+1}</div>
-        <div class="btit">${D.nome}<small>${D.sub}</small></div>
-        <div class="bacts">
-          <button class="ib" data-a="up"   title="Subir">▲</button>
-          <button class="ib" data-a="down" title="Descer">▼</button>
-          <button class="ib" data-a="dup"  title="Duplicar">⧉</button>
-          <button class="ib del" data-a="del" title="Remover">✕</button>
+      const div=document.createElement("div");
+      div.className="bloco"+(b.aberto?"":" fechado")+(SELECIONADO===b.uid?" sel":"");
+      div.style.setProperty("--c",D.cor);
+      div.dataset.uid=b.uid;
+      div.innerHTML=`
+        <div class="bhead">
+          <div class="bnum">${i+1}</div>
+          <div class="btit">${D.nome}<small>${D.sub}</small></div>
+          <div class="bacts">
+            <button class="ib" data-a="up"   title="Subir">▲</button>
+            <button class="ib" data-a="down" title="Descer">▼</button>
+            <button class="ib" data-a="dup"  title="Duplicar">⧉</button>
+            <button class="ib del" data-a="del" title="Remover">✕</button>
+          </div>
         </div>
-      </div>
-      <div class="bbody">
-        <div class="grid3">${D.params.filter(f=>campoVisivel(f,ctxB)).map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>${confHTML}
-        <div class="sub">Ferramenta deste bloco</div>
-        <div class="grid3">
-          ${F_TROCA.map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}
-        </div>
-      </div>`;
-    el.appendChild(div);
-  });
+        <div class="bbody">
+          <div class="grid3">${D.params.filter(f=>campoVisivel(f,ctxB)).map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>${confHTML}
+          <div class="sub">Ferramenta deste bloco</div>
+          <div class="grid3">
+            ${F_TROCA.map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}
+          </div>
+        </div>`;
+      el.appendChild(div);
+    });
+  }
+  // ex-camada "inspetor": painel de detalhe da operação selecionada
+  const holder=$('inspector-fields');holder.replaceChildren();
+  const selected=SEQ.find(b=>b.uid===SELECIONADO);
+  $('inspector-title').textContent=selected?DEFS[selected.tipo].nome:'Selecione uma operação';
+  if(selected){const card=$('pilha').querySelector(`[data-uid="${selected.uid}"]`);const proxy=document.createElement('div');proxy.className='bloco';proxy.dataset.uid=selected.uid;proxy.append(card.querySelector('.bbody'));holder.append(proxy);}
+  else holder.textContent='Adicione uma operação para definir ferramenta, medidas e parâmetros de corte.';
+  $('pilha').querySelectorAll('.bhead').forEach(head=>{const title=head.querySelector('.btit');title.tabIndex=0;title.setAttribute('role','button');title.setAttribute('aria-label','Selecionar '+title.textContent);title.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();head.click();}});});
+  holder.querySelectorAll('.field').forEach((field,i)=>{const input=field.querySelector('input,select');const label=field.querySelector('label');if(input&&label){input.id='operation-field-'+i;label.htmlFor=input.id;}});
+  const empty=$('pilha').querySelector('.vazio');if(empty)empty.textContent='Nenhuma operação. Use Adicionar operação para começar.';
+  if(SEQ.length)library.open=false;
+  // ex-camada "desenho 2D": aviso de fileira vinculada no inspetor
+  const linked=SEQ.find(x=>x.uid===SELECIONADO);
+  if(linked?.desenho2D?.origem===DESENHO_ID){const info=document.createElement('div');info.className='linked-operation';info.textContent=`Fileira ${linked.desenho2D.fileira+1} vinculada ao desenho 2D. Alterações de posição aqui serão substituídas ao confirmar o desenho. Revise ferramenta e condições de corte.`;$('inspector-fields').prepend(info);}
 }
 
 document.querySelector(".wrap").addEventListener("click",e=>{
@@ -681,6 +694,15 @@ function refresh(){
   $("warns").innerHTML=ws.map(w=>`<div class="${w.includes("ERRO:")?"errrow":"warnrow"}">${w.includes("ERRO:")?"⛔":"⚠"} ${w}</div>`).join("");
   refresh3D();
   renderLegenda();
+  // ex-camada "etapas": cabeçalho e código decorado
+  decorateCode();
+  $('active-project').textContent=cfg().nome;
+  $('project-name').textContent=cfg().nome;
+  $('project-count').textContent=SEQ.length+' operações';
+  renderProgramParams();
+  // ex-camada "desenho 2D": redesenha o CAD guiado e o aviso de sincronismo
+  renderDesenhos();
+  atualizarAvisoDesenho();
 }
 
 function renderLegenda(){
@@ -1219,21 +1241,6 @@ function renderProgramParams(){
  if(!SEQ.length)row(['Nenhuma operação adicionada.','','']);
  SEQ.forEach((b,i)=>{row([`${i+1} · ${DEFS[b.tipo].nome}`],true);[...DEFS[b.tipo].params,...F_TROCA].filter(f=>campoVisivel(f,ctxDoBloco(b.p))).forEach(f=>{const value=f.sel?f.sel.find(o=>String(o.v)===String(b.p[f.k]))?.t:b.p[f.k];row([f.l,f.chk?(value?'Sim':'Não'):String(value??''),f.u||'']);});});
 }
-const renderPilhaOriginal=renderPilha;
-renderPilha=function(){
- renderPilhaOriginal();
- const holder=$('inspector-fields');holder.replaceChildren();
- const selected=SEQ.find(b=>b.uid===SELECIONADO);
- $('inspector-title').textContent=selected?DEFS[selected.tipo].nome:'Selecione uma operação';
- if(selected){const card=$('pilha').querySelector(`[data-uid="${selected.uid}"]`);const proxy=document.createElement('div');proxy.className='bloco';proxy.dataset.uid=selected.uid;proxy.append(card.querySelector('.bbody'));holder.append(proxy);}
- else holder.textContent='Adicione uma operação para definir ferramenta, medidas e parâmetros de corte.';
- $('pilha').querySelectorAll('.bhead').forEach(head=>{const title=head.querySelector('.btit');title.tabIndex=0;title.setAttribute('role','button');title.setAttribute('aria-label','Selecionar '+title.textContent);title.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();head.click();}});});
- holder.querySelectorAll('.field').forEach((field,i)=>{const input=field.querySelector('input,select');const label=field.querySelector('label');if(input&&label){input.id='operation-field-'+i;label.htmlFor=input.id;}});
- const empty=$('pilha').querySelector('.vazio');if(empty)empty.textContent='Nenhuma operação. Use Adicionar operação para começar.';
- if(SEQ.length)library.open=false;
-};
-const refreshOriginal=refresh;
-refresh=function(){refreshOriginal();decorateCode();$('active-project').textContent=cfg().nome;$('project-name').textContent=cfg().nome;$('project-count').textContent=SEQ.length+' operações';renderProgramParams();};
 $('legenda').addEventListener('click',()=>renderPilha());
 showStage('planning');
 
@@ -1249,7 +1256,10 @@ const DESENHO_CAMPOS=[
 function desenhoInicial(){return {largura:cfg().bx,altura:cfg().by,mx:cfg().bx*.2,my:cfg().by*.2,nx:2,ny:2,diametro:8};}
 let DESENHO={versao:1,p:desenhoInicial(),confirmado:null};
 let desenhoSelecao='furos';
-function salvarDesenho2D(){return JSON.parse(JSON.stringify(DESENHO));}
+function salvarDesenho2D(){
+ // ex-camada "CAD 2D": inclui as entidades livres junto do desenho guiado
+ return {...JSON.parse(JSON.stringify(DESENHO)), livre:cadClone(CAD)};
+}
 function carregarDesenho2D(raw){
  DESENHO={versao:1,p:desenhoInicial(),confirmado:null};
  if(raw&&raw.versao===1&&raw.p){
@@ -1257,6 +1267,11 @@ function carregarDesenho2D(raw){
   DESENHO.confirmado=typeof raw.confirmado==='string'?raw.confirmado:null;
  }
  atualizarCamposDesenho();renderDesenhos();
+ // ex-camada "CAD 2D": restaura as entidades livres do arquivo carregado
+ CAD={version:1,next:1,entities:[]};cadUndo=[];cadRedo=[];cadSelected=null;cadPoints=[];cadDrag=null;cadHover=null;
+ try{if(raw?.livre){const data=raw.livre;if(data.version!==1||!Array.isArray(data.entities)||data.entities.length>500)throw Error('Formato de desenho livre inválido.');const ids=new Set();const entities=data.entities.map(e=>{if(!Number.isSafeInteger(e.id)||e.id<1||ids.has(e.id)||!cadValid(e))throw Error('Entidade de desenho inválida.');ids.add(e.id);const clean={id:e.id,type:e.type};CAD_FIELDS[e.type].forEach(([k])=>clean[k]=e[k]);if(e.link!=null)clean.link=e.link;return clean;});cadApplyLinks(entities);CAD={version:1,next:Math.max(0,...ids)+1,entities};}}
+ catch(err){toast('Desenho livre não carregado: '+err.message);}
+ cadRender();cadFit();
 }
 function validarDesenho(p){
  const erros=[];
@@ -1350,10 +1365,6 @@ function atualizarAvisoDesenho(){
  if(operacoesVinculadas().some(b=>b.p.td!==b.p.dia))messages.push('Diâmetro da ferramenta difere do furo desenhado. Revise a broca no Planejamento.');
  if(messages.length){const el=document.createElement('div');el.id='drawing-warning';el.className='warnrow';el.textContent=messages.join(' ');$('warns').prepend(el);}
 }
-const refreshSemDesenho=refresh;
-refresh=function(){refreshSemDesenho();renderDesenhos();atualizarAvisoDesenho();};
-const renderPilhaSemDesenho=renderPilha;
-renderPilha=function(){renderPilhaSemDesenho();const b=SEQ.find(x=>x.uid===SELECIONADO);if(b?.desenho2D?.origem===DESENHO_ID){const info=document.createElement('div');info.className='linked-operation';info.textContent=`Fileira ${b.desenho2D.fileira+1} vinculada ao desenho 2D. Alterações de posição aqui serão substituídas ao confirmar o desenho. Revise ferramenta e condições de corte.`;$('inspector-fields').prepend(info);}};
 atualizarCamposDesenho();renderDesenhos();
 
 /* CAD 2D local: entidades independentes do percurso CNC. */
@@ -1401,10 +1412,10 @@ function cadSnap(point,exclude){
  if($('cad-grid-snap').checked&&Number.isFinite(grid)&&grid>=.001&&grid<=1000)p={x:Math.round(p.x/grid)*grid,y:Math.round(p.y/grid)*grid};
  return {x:cadRound(p.x),y:cadRound(p.y)};
 }
-const drawingOriginal=[...$('drawing').children];
+const drawingChildren=[...$('drawing').children];
 $('drawing').replaceChildren();
 const modes=document.createElement('div');modes.className='drawing-modes';modes.innerHTML='<button id="cad-mode" aria-pressed="true">Desenho livre</button><button id="matrix-mode" aria-pressed="false">Padrão de furos vinculado</button>';
-const matrix=document.createElement('div');matrix.id='matrix-mode-content';matrix.className='drawing-mode draft-grid';matrix.hidden=true;matrix.append(...drawingOriginal);
+const matrix=document.createElement('div');matrix.id='matrix-mode-content';matrix.className='drawing-mode draft-grid';matrix.hidden=true;matrix.append(...drawingChildren);
 const free=document.createElement('div');free.id='cad-mode-content';free.className='drawing-mode cad-grid';
 free.innerHTML=`<aside class="cad-side"><h2>Desenhar</h2><div class="cad-tools">${[['select','Selecionar'],['move','Mover'],['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button><button class="cad-action" id="cad-delete">Excluir</button></div><p class="hint">Clique os pontos na área de desenho. Esc cancela. Arcos: centro, início e direção final, em sentido anti-horário.</p><h2>Entidades</h2><div id="cad-list" class="cad-list"></div></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input type="checkbox" id="cad-dimensions" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Coordenadas</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div><div class="notice">Geometria livre salva com o projeto. Ainda não gera percurso CNC. Para gerar furação, use Padrão de furos vinculado.</div></aside>`;
 $('drawing').append(modes,free,matrix);
@@ -1484,13 +1495,6 @@ cadSvg.addEventListener('pointerup',event=>{const drag=cadDrag;cadDrag=null;if(d
 cadSvg.addEventListener('pointercancel',()=>{cadDrag=null;cadRenderCanvas();});
 cadSvg.addEventListener('wheel',event=>{event.preventDefault();const p=cadPoint(event),factor=event.deltaY>0?1.15:1/1.15;if(cadView.w*factor<.1||cadView.w*factor>1000000)return;cadView={x:p.x+(cadView.x-p.x)*factor,y:-p.y+(cadView.y+p.y)*factor,w:cadView.w*factor,h:cadView.h*factor};cadRenderCanvas();},{passive:false});
 free.addEventListener('keydown',event=>{if(event.target.matches('input,select,textarea'))return;if(event.key==='Escape'){cadPoints=[];cadDrag=null;cadHover=null;cadRenderCanvas();}if(event.key==='Delete'){event.preventDefault();cadDelete();}if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){event.preventDefault();cadHistory(event.shiftKey);}});
-const salvarDesenhoSemCAD=salvarDesenho2D,carregarDesenhoSemCAD=carregarDesenho2D;
-salvarDesenho2D=function(){return {...salvarDesenhoSemCAD(),livre:cadClone(CAD)};};
-carregarDesenho2D=function(raw){carregarDesenhoSemCAD(raw);CAD={version:1,next:1,entities:[]};cadUndo=[];cadRedo=[];cadSelected=null;cadPoints=[];cadDrag=null;cadHover=null;
- try{if(raw?.livre){const data=raw.livre;if(data.version!==1||!Array.isArray(data.entities)||data.entities.length>500)throw Error('Formato de desenho livre inválido.');const ids=new Set();const entities=data.entities.map(e=>{if(!Number.isSafeInteger(e.id)||e.id<1||ids.has(e.id)||!cadValid(e))throw Error('Entidade de desenho inválida.');ids.add(e.id);const clean={id:e.id,type:e.type};CAD_FIELDS[e.type].forEach(([k])=>clean[k]=e[k]);if(e.link!=null)clean.link=e.link;return clean;});cadApplyLinks(entities);CAD={version:1,next:Math.max(0,...ids)+1,entities};}}
- catch(err){toast('Desenho livre não carregado: '+err.message);}
- cadRender();cadFit();
-};
 cadRender();
 
 /* ---------- boot ---------- */
