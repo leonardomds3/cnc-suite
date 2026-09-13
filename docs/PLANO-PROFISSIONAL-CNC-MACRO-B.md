@@ -340,3 +340,183 @@ Ao retomar, ler primeiro STATUS e regras, depois apenas os módulos necessários
 - Limites iniciais: eixos, operações, ferramentas e materiais contemplados.
 
 Essas pendências orientam o início; não é necessário responder tudo antes de enviar o repositório.
+
+
+## Execução do layout — primeira entrega em revisão, 12/09/2026
+
+Leonardo priorizou o layout agora. Revisão de divisões por zero permanece pendente;
+não condiciona esta entrega visual. A referência inteira permanece no plano.
+
+| Tela | Entrega atual | Continuação para corresponder à imagem |
+| --- | --- | --- |
+| Projetos | Projeto atual; salvar, abrir e limpar montagem JSON | Biblioteca, miniaturas, busca, Nova peça, DXF, clientes/dispositivos/exemplos/lixeira e revisões |
+| Desenho 2D | Etapa de navegação e escopo identificado como planejado | Lista de retas/arcos/furos; seleção, mover, copiar, aparar, cota, excluir; grade/cotas; unidades/origem; confirmar geometria; revisar PDF/imagem |
+| Medidas vinculadas | Etapa de navegação e escopo identificado como planejado | Campos da peça, geometria central, relações à direita, manter proporções, recalcular e conferir dependências |
+| Planejamento | Sequência, adicionar operação, seleção, ferramentas, parâmetros e prévia | Evoluir apresentação da peça e propriedades conforme novos recursos geométricos |
+| Simulação | Prévia existente reutilizada, vistas e importação NC preservadas | Indicadores reais de tempo/material/trajectória; opções de exibição; ferramenta; reprodução/progresso; revisar programa |
+| Programa | Código real, avisos, copiar/exportar, tabela de entradas por operação e salvar montagem | Mapeamento de variáveis #, salvar revisão e ficha de preparação |
+
+Configurações conserva o zero atual e os valores padrão. As medidas da imagem não viram defaults.
+O painel de parâmetros da operação é preenchido pelas definições existentes, inclusive campos
+condicionais e saídas calculadas. Não se usa armazenamento local ou contas fictícias.
+O salvamento atual é uma montagem JSON, não um histórico de revisões.
+Próxima auditoria visual compara hierarquia, cores, proporções e navegação antes de expandir recursos.
+O arquivo final proposto tem CSS e JS inline; os arquivos layout.css/layout.js são somente
+insumos da pasta de revisão. Engine e estratégias continuam compartilhados como no projeto atual.
+Após aplicar e commitar a proposta aprovada, apagar as cópias geradas. Não apagar a referência oficial.
+
+
+# Desenho 2D e furação vinculada — auditoria de 13/09/2026
+
+## Entrega
+
+Na cópia do Montador, Desenho 2D e Parâmetros agora mostram um retângulo cotado
+e uma matriz de furos. Os campos das duas telas compartilham o mesmo modelo.
+O retângulo usa zero X/Y no centro, Z0 na face; unidades em mm.
+
+Comprimento, largura, distâncias das bordas, diâmetro, furos por fileira e número
+de fileiras são editáveis. O editor admite até 20 × 20 furos e dimensões de
+até 10.000 mm. Uma única posição em um eixo fica em zero; a margem desse eixo
+não é usada. As margens permanecem fixas quando as dimensões mudam; o diâmetro
+não escala automaticamente.
+
+Confirmar geometria cria/atualiza uma operação nativa `furosL` para cada fileira.
+Não foi criada uma nova estratégia de usinagem nem alterado o motor compartilhado.
+As operações vinculadas são identificadas dentro da montagem. Reconfirmar não duplica
+as operações; os valores de ferramenta, rotação, avanço, profundidade e Q já editados
+na fileira são preservados. Novas fileiras usam os padrões existentes do Montador,
+com diâmetro inicial de ferramenta igual ao furo. Esses padrões NÃO constituem
+recomendação técnica de corte para um material específico.
+
+Duplicar uma fileira pelo Planejamento cria uma operação independente. Editar coordenadas
+manualmente ou excluir uma fileira sinaliza divergência com o desenho. A confirmação
+seguinte restaura a geometria vinculada. Operações independentes conservam seus dados
+e sua ordem relativa; as fileiras vinculadas são reunidas em seu grupo ao confirmar.
+
+## Confirmação e avisos
+
+Editar o desenho atualiza a vista imediatamente, mas só a confirmação atualiza o programa.
+Enquanto há divergência, Programa exibe aviso e mantém o código das operações atuais.
+Geometria com campos vazios, dimensões não positivas, contagens fracionárias ou limites
+excedidos não substitui a geometria confirmada. Isso não bloqueia a geração/exportação
+do programa existente. Furos sobrepostos, além da borda ou peça maior que o material
+produzem avisos informativos; não bloqueiam a confirmação.
+
+Alterar o diâmetro desenhado preserva a ferramenta das fileiras existentes e gera aviso
+se o diâmetro da broca não corresponder ao desenho. A seleção real da ferramenta continua
+sob revisão em Planejamento.
+
+## O que significa parametrizado nesta etapa
+
+As dimensões e margens são vinculadas NO APLICATIVO. O programa reutiliza o laço Macro B
+de `furosL`: quantidade, contador e cálculo das posições. As coordenadas iniciais e o
+espaçamento entram como valores calculados. Editar uma variável na máquina não reproduz
+todos os vínculos do desenho. Um modelo de variáveis geométricas compartilhadas na máquina
+fica para a próxima evolução, com mapa de variáveis próprio e conferência de dependências.
+
+O retângulo é uma referência geométrica: esta entrega gera apenas a furação.
+Não há ainda desbaste do retângulo, compensação de contorno, editor de retas/arcos livres,
+importação DXF, detecção de colisões ou otimização automática de deslocamentos.
+
+## Persistência
+
+Salvar montagem inclui `desenho2D` e a identificação de origem/fileira nas operações.
+Reabrir restaura o desenho e os vínculos, mesmo com IDs de operação recriados.
+Montagens antigas sem desenho continuam abrindo. Sem localStorage ou serviço externo.
+
+## Testes executados pelo Codex
+
+- 34 verificações da interface anterior continuam aprovadas, incluindo código e avisos
+  iguais aos originais nas três operações nativas e sete estratégias.
+- 22 verificações específicas do desenho em Node/jsdom: coordenadas analíticas, confirmação,
+  preservação dos parâmetros de corte, duplicação independente, contagens inválidas, limites,
+  avisos, exportação exata, salvar/reabrir e compatibilidade com montagem antiga.
+- Salvamento/exportação testados com Blob e clique de download interceptado no ensaio;
+  leitura de arquivo simulada por FileReader no jsdom. Não equivale a download/reabertura
+  manual pelo navegador.
+- Navegador HTTP: retângulo 160 × 120, margens 20/20, três furos por fileira e duas fileiras.
+  Confirmados X = −60/0/60 e Y = −40/40 no Macro B e na tabela. Alterar comprimento para
+  200 e atualizar produziu X = −80/0/80, mantendo Y = −40/40. Programa de 39 linhas.
+- Conferência visual do Desenho 2D em 1440 × 900; sem erros/avisos no console da aba final.
+- Nenhum teste no Estúdio nem validação em máquina. A prévia não comprova usinabilidade.
+
+## Continuação técnica planejada
+
+Antes de recomendar automaticamente condições ou percursos, cadastrar:
+
+1. Material específico, dureza, condição, bruto e sobremetal.
+2. Ferramenta: metal duro, HSS ou HSS com cobalto; diâmetro, dentes, comprimento útil,
+   balanço, revestimento e capacidade de entrada; fabricante, geometria e classe de inserto.
+3. Vc e avanço recomendados pelo fabricante para a combinação e aplicação. A cor de grupo
+   de aplicação será identificação auxiliar, não fonte suficiente para definir corte.
+4. Máquina: limite real de RPM, potência/torque, rigidez/estado, porta-ferramenta, fixação,
+   refrigeração. Teto configurável de 8.000 ou 10.000 rpm solicitado para perfil de máquina
+   antiga, limitado também pelo conjunto real. Não é rotação-alvo e não será aplicado um
+   percentual de perda arbitrário por idade. Máquina nova também depende da montagem.
+5. Percurso: engajamento, esforços, aproximação/saída, planos seguros, sobremetal e material
+   restante. Redução de deslocamentos/recuos somente em regiões verificadas como livres.
+
+Primeiro validar este vínculo simples; depois desenvolver contornos e geração paramétrica
+completa. A revisão de divisão por zero do avaliador geral continua pendente.
+
+## Aprovação
+
+Layout aceito temporariamente por Leonardo. Esta adição de desenho está em revisão.
+Originais intactos; não houve commit ou envio. A proposta completa tem quatro arquivos
+de aplicação no manifesto. Após aprovação e commit, apagar a pasta de cópias, preservando
+os arquivos oficiais e a referência visual.
+
+
+# Desenho livre 2D — proposta para auditoria, 13/09/2026
+
+Implementado apenas na cópia do Montador. Esta etapa substitui a indicação anterior
+de que o editor de formas livres ainda estava inteiramente pendente.
+
+## Como conferir
+
+1. Abra Desenho 2D > Desenho livre pelo servidor HTTP.
+2. Reta: clique nos dois extremos. Retângulo: clique em dois cantos opostos.
+3. Círculo: clique no centro e em um ponto do raio.
+4. Arco: clique no centro, no início e na direção final; sentido anti-horário.
+5. Selecione uma entidade na lista ou no desenho e edite coordenadas/medidas
+   nas propriedades. Use Aplicar propriedades para confirmar.
+6. Em Mover, arraste o contorno. Excluir, desfazer e refazer estão disponíveis.
+7. Grade e pontos permitem encaixes; a roda amplia/reduz, Deslocar vista move
+   a vista e Ajustar vista enquadra as entidades. Esc cancela a construção.
+8. Vincular medida principal iguala comprimento de reta, largura de retângulo
+   ou raio ao valor principal de outra entidade. Ciclos são rejeitados.
+9. Salvar/abrir montagem JSON inclui as entidades e vínculos do desenho livre.
+10. Padrão de furos vinculado mantém a geração de fileiras já implementada.
+
+## Escopo e limites
+
+Editor geométrico inicial: retas, retângulos, círculos e arcos, até 500 entidades.
+As cotas exibidas são anotações de medidas; não há solucionador geral de restrições.
+Vínculos disponíveis são de igualdade da medida principal, não tangência,
+coincidência, paralelismo ou perpendicularidade. Excluir uma referência conserva
+as medidas atuais das dependentes e remove o vínculo direto.
+
+Desenho livre ainda não gera percurso nem código CNC. Não há reconhecimento de
+contorno fechado, compensação de ferramenta, entradas/saídas, desbaste ou DXF.
+A integração CNC atual continua restrita ao padrão retangular de furos.
+Não foram introduzidas recomendações automáticas de ferramenta ou corte.
+
+Próxima etapa: validar e organizar contornos conectados; depois definir operação,
+lado de usinagem, ferramenta e percurso antes de integrar o contorno ao Macro B.
+
+## Evidências executadas pelo Codex
+
+- 34 verificações anteriores de interface/regressão aprovadas (resultado.json).
+- 22 verificações do padrão de furos aprovadas (resultado-desenho.json).
+- 23 verificações do CAD aprovadas (resultado-cad.json): formas, propriedades,
+  vínculos/ciclos, remoção, histórico, serialização/restauração, encaixes,
+  eventos de criação/movimento, zoom/pan e preservação do programa existente.
+- Os eventos de ponteiro automatizados usam transformação SVG simulada no jsdom.
+- Navegador real via HTTP: quatro formas criadas com cliques; círculo arrastado
+  de Y=-5 para Y=10, mantendo X=-30 e raio 15. Sem erros capturados no console.
+- Download e reabertura de arquivo não repetidos no navegador nesta etapa;
+  persistência do CAD validada por serialização/restauração automatizada.
+- Nenhum teste de máquina. Nenhum teste no Estúdio.
+
+Total: 79 verificações automatizadas aprovadas. Originais preservados, sem commit
+ou envio. Após auditoria, aplicação e commit autorizados, apagar as cópias geradas.

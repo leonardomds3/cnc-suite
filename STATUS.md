@@ -109,3 +109,97 @@ Montador conferido via HTTP com AP zero, negativo e retorno a 0.1.
 Estúdio fora dos testes. Sem validação de máquina.
 Revisar revisao-ap-escareado/LEIA-ME.md e quatro diffs. Aplicação e commit
 aguardam aprovação; publicação no GitHub depende de autorização separada.
+
+
+## Proposta de layout do Montador — 12/09/2026
+
+Primeira entrega visual em revisão, baseada em docs/referencias/conceito-montador-macro-b.jpg.
+Menu persistente com seis etapas, identificação do projeto, azul-marinho e ciano.
+Planejamento: operações à esquerda, prévia central e parâmetros da seleção à direita.
+Programa: código/exportação à esquerda e tabela dos parâmetros atuais por operação à direita.
+Projetos reutiliza salvar/abrir/limpar montagem JSON; Configurações reúne os campos gerais.
+Simulação reutiliza a prévia existente. Desenho 2D e vínculos são identificados como planejados.
+Não é ainda reprodução funcional completa da imagem: biblioteca, DXF, geometria, vínculos,
+remoção de material, reprodução, estimativas, revisões e ficha de preparação continuam pendentes.
+Revisão 2: colunas contínuas com divisórias, altura da janela, rolagem interna,
+propriedades em linhas, operações compactas e ações agrupadas na base do painel.
+Numeração visual e cores de sintaxe implementadas sem alterar texto do programa.
+Tabela de variáveis # vinculada ao programa permanece pendente; tabela atual mostra entradas.
+Motor e estratégias copiados sem mudança; somente o HTML proposto muda no aplicativo.
+34 verificações Node/jsdom aprovadas, incluindo código/avisos idênticos nas dez operações
+(três nativas e sete fichas), seleção, edição condicional, duplicação, reordenação e navegação.
+Montador via HTTP: AP zero/positivo, campos condicionais, telas Programa/Planejamento,
+troca de prévia entre Planejamento/Simulação e vista TOPO conferidos pelo Codex.
+Visual desktop 1440x900 e navegação estreita conferidos. Nenhum teste no Estúdio.
+Um erro de inicialização durante construção foi corrigido; sem novos erros no ciclo final.
+Downloads/reabertura de arquivos não foram repetidos no navegador; validação de máquina não realizada.
+Originais preservados. Aplicação e commit dependem da auditoria de Leonardo desta proposta.
+Após aprovação e commit, apagar a pasta revisao-layout-montador, conforme regra do usuário.
+
+
+## Desenho 2D — 13/09/2026, proposta em revisão
+
+Retângulo e matriz de furos vinculados implementados em cópia. Confirmação atualiza
+fileiras nativas furosL; parâmetros de corte existentes são preservados.
+Desenho salvo/reaberto junto com montagem JSON; operações independentes preservadas.
+34 verificações anteriores e 22 de desenho aprovadas. Navegador: 160 -> 200 mm
+recalculou centros X -60/0/60 -> -80/0/80; Y -40/40 preservado. Sem erros no console.
+Vínculos completos estão no aplicativo; Macro B exporta laços e coordenadas calculadas.
+Não há ainda contorno usinado, DXF ou seleção técnica automática de corte.
+Esta seção substitui a indicação anterior de que Desenho/Parâmetros são apenas planejados.
+Layout aceito temporariamente; desenho aguarda auditoria. Sem commit/envio.
+
+
+# Desenho livre 2D — proposta para auditoria, 13/09/2026
+
+Implementado apenas na cópia do Montador. Esta etapa substitui a indicação anterior
+de que o editor de formas livres ainda estava inteiramente pendente.
+
+## Como conferir
+
+1. Abra Desenho 2D > Desenho livre pelo servidor HTTP.
+2. Reta: clique nos dois extremos. Retângulo: clique em dois cantos opostos.
+3. Círculo: clique no centro e em um ponto do raio.
+4. Arco: clique no centro, no início e na direção final; sentido anti-horário.
+5. Selecione uma entidade na lista ou no desenho e edite coordenadas/medidas
+   nas propriedades. Use Aplicar propriedades para confirmar.
+6. Em Mover, arraste o contorno. Excluir, desfazer e refazer estão disponíveis.
+7. Grade e pontos permitem encaixes; a roda amplia/reduz, Deslocar vista move
+   a vista e Ajustar vista enquadra as entidades. Esc cancela a construção.
+8. Vincular medida principal iguala comprimento de reta, largura de retângulo
+   ou raio ao valor principal de outra entidade. Ciclos são rejeitados.
+9. Salvar/abrir montagem JSON inclui as entidades e vínculos do desenho livre.
+10. Padrão de furos vinculado mantém a geração de fileiras já implementada.
+
+## Escopo e limites
+
+Editor geométrico inicial: retas, retângulos, círculos e arcos, até 500 entidades.
+As cotas exibidas são anotações de medidas; não há solucionador geral de restrições.
+Vínculos disponíveis são de igualdade da medida principal, não tangência,
+coincidência, paralelismo ou perpendicularidade. Excluir uma referência conserva
+as medidas atuais das dependentes e remove o vínculo direto.
+
+Desenho livre ainda não gera percurso nem código CNC. Não há reconhecimento de
+contorno fechado, compensação de ferramenta, entradas/saídas, desbaste ou DXF.
+A integração CNC atual continua restrita ao padrão retangular de furos.
+Não foram introduzidas recomendações automáticas de ferramenta ou corte.
+
+Próxima etapa: validar e organizar contornos conectados; depois definir operação,
+lado de usinagem, ferramenta e percurso antes de integrar o contorno ao Macro B.
+
+## Evidências executadas pelo Codex
+
+- 34 verificações anteriores de interface/regressão aprovadas (resultado.json).
+- 22 verificações do padrão de furos aprovadas (resultado-desenho.json).
+- 23 verificações do CAD aprovadas (resultado-cad.json): formas, propriedades,
+  vínculos/ciclos, remoção, histórico, serialização/restauração, encaixes,
+  eventos de criação/movimento, zoom/pan e preservação do programa existente.
+- Os eventos de ponteiro automatizados usam transformação SVG simulada no jsdom.
+- Navegador real via HTTP: quatro formas criadas com cliques; círculo arrastado
+  de Y=-5 para Y=10, mantendo X=-30 e raio 15. Sem erros capturados no console.
+- Download e reabertura de arquivo não repetidos no navegador nesta etapa;
+  persistência do CAD validada por serialização/restauração automatizada.
+- Nenhum teste de máquina. Nenhum teste no Estúdio.
+
+Total: 79 verificações automatizadas aprovadas. Originais preservados, sem commit
+ou envio. Após auditoria, aplicação e commit autorizados, apagar as cópias geradas.
