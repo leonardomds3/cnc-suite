@@ -1,8 +1,6 @@
-/* ui.css — estilo compartilhado entre montador_macro_cnc_2.html e estudio_cnc.html.
-   Etapa 1 da modularização (ver INSTRUCAO-MODULARIZACAO.md).
-   Contém só as regras (ou a parte das regras) idênticas nos dois arquivos;
-   o que é específico de cada interface continua no <style> de cada HTML,
-   carregado depois deste link — por isso os overrides locais continuam valendo. */
+/* ui.css — estilo do montador_macro_cnc_2.html.
+   Carregado antes do <style> remanescente do HTML, que guarda só o que é
+   específico daquela interface — por isso os overrides locais continuam valendo. */
 
 :root{
   --bg:#0e1114; --panel:#171b21; --panel-2:#1f242b; --line:#2b323c;

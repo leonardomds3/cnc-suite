@@ -1,11 +1,11 @@
 "use strict";
 /* ============================================================
    ENGINE.JS — motor de usinagem Fanuc Macro B
-   Compartilhado por estudio_cnc.html e montador_macro_cnc_2.html.
+   Usado por montador_macro_cnc_2.html.
 
    Script classico (sem type="module") de proposito: imports de
    modulo ES sao bloqueados por CORS ao abrir um arquivo via
-   file://, e os dois HTMLs precisam continuar abrindo com
+   file://, e o HTML precisa continuar abrindo com
    duplo clique, sem servidor.
 
    Nao depende de DOM, exceto cfg() (le os campos fixos de
