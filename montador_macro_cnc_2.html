@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="estilos/ui.css">
 <style>
   html,body{margin:0;padding:0}
   body{
@@ -413,8 +413,8 @@ input:focus,select:focus{border-color:#18b8e6;box-shadow:0 0 0 3px #18b8e622}.ch
   </div>
 </div>
 <script src="engine.js"></script>
-<script src="estrategias.js"></script>
-<script src="cad2d.js"></script>
+<script src="dados/estrategias.js"></script>
+<script src="src/ui/cad2d.js"></script>
 <script>
 "use strict";
 /* ============================================================
@@ -1221,7 +1221,7 @@ function renderProgramParams(){
 $('legenda').addEventListener('click',()=>renderPilha());
 showStage('planning');
 </script>
-<script src="desenho2d.js"></script>
+<script src="src/ui/desenho2d.js"></script>
 <script>
 /* ---------- boot ---------- */
 CAD2D.init();

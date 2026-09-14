@@ -38,7 +38,7 @@ function carregar(nomeArquivo) {
 }
 
 carregar("engine.js");
-carregar("estrategias.js");
+carregar("dados/estrategias.js");
 
 /* Projeto de referência: 1 operação nativa + 1 ficha JSON + 1 macro
    custom, na mesma ordem em que addBloco() monta um bloco na UI
