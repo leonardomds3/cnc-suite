@@ -203,3 +203,16 @@ lado de usinagem, ferramenta e percurso antes de integrar o contorno ao Macro B.
 
 Total: 79 verificações automatizadas aprovadas. Originais preservados, sem commit
 ou envio. Após auditoria, aplicação e commit autorizados, apagar as cópias geradas.
+
+
+## Modularização do Montador — 13-14/09/2026, concluída
+
+As cinco etapas de INSTRUCAO-MODULARIZACAO.md foram aplicadas e commitadas, uma por
+vez com diff próprio: extração de `ui.css` compartilhado, achatamento dos wrappers
+empilhados (`refresh`, `renderPilha`, `salvarDesenho2D`/`carregarDesenho2D` — cada um
+passou a ter uma única definição), extração de `cad2d.js`, extração de `desenho2d.js`
+e reescrita do `<body>` do Montador já no layout final de shell/etapas, sem a
+cirurgia de DOM em runtime que existia antes. `engine.js` não foi tocado.
+Commits: 91e8fa6, 20a683c, 3e56097, 3a6d74c, d0ae556.
+G-code comparado (antes.NC/depois.NC) idêntico a cada etapa; console sem erro/aviso.
+Nova estrutura de arquivos documentada em CLAUDE.md.
