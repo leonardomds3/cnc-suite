@@ -263,19 +263,78 @@ input:focus,select:focus{border-color:#18b8e6;box-shadow:0 0 0 3px #18b8e622}.ch
 </head>
 <body>
 <div class="wrap">
+<header class="suite-top"><div class="suite-brand">CNC <span>· Macro B</span></div><div class="suite-project">Projeto atual: <strong id="active-project"></strong></div></header>
+<div class="suite-shell">
+<nav class="suite-nav" aria-label="Etapas do projeto">
+  <button type="button" data-stage="projects"><span class="nav-icon" aria-hidden="true">▱</span>Projetos</button>
+  <button type="button" data-stage="drawing"><span class="nav-icon" aria-hidden="true">⌁</span>Desenho 2D</button>
+  <button type="button" data-stage="parameters"><span class="nav-icon" aria-hidden="true">⚙</span>Parâmetros</button>
+  <button type="button" data-stage="planning"><span class="nav-icon" aria-hidden="true">☷</span>Planejamento</button>
+  <button type="button" data-stage="simulation"><span class="nav-icon" aria-hidden="true">▷</span>Simulação</button>
+  <button type="button" data-stage="program"><span class="nav-icon" aria-hidden="true">≡</span>Programa</button>
+  <button type="button" data-stage="settings" class="settings"><span class="nav-icon" aria-hidden="true">⚙</span>Configurações</button>
+</nav>
+<main class="suite-main">
+<div class="stage-heading"><h1 id="stage-title"></h1><p id="stage-description"></p></div>
 
-  <header>
-    <div class="badge">MM</div>
-    <div>
-      <h1>Montador Macro</h1>
-      <p>Monte usinagens como Lego · Fanuc Macro B · preview 3D</p>
-    </div>
-  </header>
+<section id="projects" class="stage" hidden><div class="card"><div class="eyebrow">Meu projeto</div><div class="project-summary"><span>Montagem atual</span><strong id="project-name"></strong><span id="project-count"></span></div><div id="project-actions" class="project-actions">
+        <div class="btnrow">
+          <button class="btn ghost" id="salvarM" title="Baixa a montagem em .json">💾 Salvar montagem</button>
+          <button class="btn ghost" id="abrirM" title="Abre uma montagem .json">📂 Abrir</button>
+          <input type="file" id="fileM" accept=".json" style="display:none">
+          <button class="btn ghost" id="limparM" style="color:var(--red)">✕ Limpar</button>
+        </div>
+</div><p class="hint">Salve sua montagem em um arquivo JSON para continuar depois. Use Abrir para recuperar um arquivo salvo.</p><div class="notice">Biblioteca com miniaturas, busca, clientes, lixeira e histórico de revisões: planejados.</div></div></section>
 
-  <div class="cols">
-    <!-- ===================== COLUNA ESQUERDA ===================== -->
-    <div>
+<section id="drawing" class="stage" hidden><div class="card future"><span class="planned">Planejado</span><h2>Crie ou importe o contorno da peça</h2><p>A próxima construção desta etapa seguirá o desenho cotado da referência.</p><ul><li>Retas, arcos e furos; selecionar, mover, copiar, aparar, cotar e excluir.</li><li>Grade central com geometria branca, cotas ciano e seleção amarela.</li><li>Unidades, origem e confirmação da geometria no painel à direita.</li><li>Importação DXF e revisão da interpretação de PDF ou imagem.</li></ul></div></section>
 
+<section id="parameters" class="stage" hidden><div class="card future"><span class="planned">Planejado</span><h2>Medidas vinculadas</h2><p>Parâmetros da peça à esquerda, desenho cotado ao centro e relações entre medidas à direita.</p><ul><li>Comprimento, diâmetro e raio vinculados a entidades da geometria.</li><li>Manter proporções, recalcular geometria e conferir vínculos.</li><li>Indicação das operações que precisam de revisão após uma mudança.</li></ul><p>As medidas das operações existentes continuam disponíveis em Planejamento. O bloco de material está em Configurações.</p></div></section>
+
+<section id="planning" class="stage planning-grid"><div id="operations" class="card"><div class="eyebrow">Operações</div><span class="n" id="qtd"></span>
+        <div class="pilha" id="pilha"></div>
+        <details class="operation-library" open>
+          <summary>＋ Adicionar operação</summary>
+          <div class="paleta" id="paleta"></div>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn ghost" id="novoMacro">＋ Cadastrar macro</button>
+          </div>
+        </details>
+</div><div id="preview-slot">
+      <div class="card" id="preview-card">
+        <div class="eyebrow">Preview 3D <span class="n">· arraste para girar · pinça/scroll = zoom</span></div>
+        <div class="vis" id="canvasWrap">
+          <div class="viewbtns">
+            <button class="vb on" data-v="iso">ISO</button>
+            <button class="vb" data-v="topo">TOPO</button>
+            <button class="vb" data-v="frente">FRENTE</button>
+          </div>
+        </div>
+        <div class="legenda" id="legenda"></div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="btn ghost" id="importNC" title="Simula um programa .NC e desenha o caminho da ferramenta no 3D">⬆ Importar .NC no preview</button>
+          <input type="file" id="fileNC" accept=".nc,.NC,.txt,.tap,.cnc,.mpf,.eia,.min,.prg" multiple style="display:none">
+        </div>
+      </div>
+</div><aside id="inspector" class="card"><div class="eyebrow">Parâmetros da operação</div><h2 id="inspector-title"></h2><div id="inspector-fields"></div></aside></section>
+
+<section id="simulation" class="stage" hidden><div id="simulation-slot"></div><div class="notice">Prévia de volumes e trajetórias. Reprodução, tempo estimado e remoção de material ainda não implementados. Revise limites e fixação antes de usinar.</div></section>
+
+<section id="program" class="stage program-grid" hidden><div id="program-slot">
+      <div class="card">
+        <div class="eyebrow">Programa Macro B</div>
+        <div id="warns"></div>
+        <div class="codewrap">
+          <div class="codehead"><span id="linhas">0 linhas</span><span class="sp"></span><span id="nomeArq">MONTAGEM1.NC</span></div>
+          <div class="code-scroll"><pre class="code-gutter" aria-hidden="true"></pre><pre id="saida"></pre></div>
+        </div>
+      </div>
+</div><aside class="card"><div class="eyebrow">Parâmetros das operações</div><p class="hint">Valores atuais por operação. Edite em Planejamento. As variáveis # são reutilizadas no programa.</p><div class="table-scroll"><table class="param-table"><thead><tr><th>Descrição</th><th>Valor</th><th>Unidade</th></tr></thead><tbody id="program-params"></tbody></table></div><div class="btnrow">
+          <button class="btn primary" id="baixar">Exportar .NC</button>
+          <button class="btn" id="copiar">Copiar código</button>
+          <button class="btn" id="save-program-project">Salvar montagem</button>
+        </div><div class="notice">Ajustes feitos na máquina precisam ser conferidos manualmente. Histórico de revisões e ficha de preparação: planejados.</div></aside></section>
+
+<section id="settings" class="stage" hidden>
       <div class="card">
         <div class="eyebrow">Programa &amp; Material</div>
         <p class="hint">Zero peça: <b>X0 Y0 no centro do bloco</b> · <b>Z0 na face superior</b>. Cada bloco especifica a própria ferramenta — a troca só entra no programa quando o T muda de um bloco para o outro.</p>
@@ -318,62 +377,10 @@ input:focus,select:focus{border-color:#18b8e6;box-shadow:0 0 0 3px #18b8e622}.ch
         <div class="hint" id="calcInfo" style="margin:6px 2px 0"></div>
         <label class="chk" style="margin-top:8px"><input type="checkbox" id="g-g53" checked> G53 Y300 no final (recuar mesa)</label>
       </div>
-
-      <div class="card">
-        <div class="eyebrow">Peças de montagem <span class="n">· toque para adicionar</span></div>
-        <div class="paleta" id="paleta"></div>
-        <div class="btnrow" style="margin-top:10px">
-          <button class="btn ghost" id="novoMacro">＋ Cadastrar macro</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="eyebrow">Sequência de usinagem <span class="n" id="qtd"></span></div>
-        <div class="pilha" id="pilha"></div>
-        <div class="btnrow">
-          <button class="btn ghost" id="salvarM" title="Baixa a montagem em .json">💾 Salvar montagem</button>
-          <button class="btn ghost" id="abrirM" title="Abre uma montagem .json">📂 Abrir</button>
-          <input type="file" id="fileM" accept=".json" style="display:none">
-          <button class="btn ghost" id="limparM" style="color:var(--red)">✕ Limpar</button>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ===================== COLUNA DIREITA ===================== -->
-    <div class="sticky">
-
-      <div class="card">
-        <div class="eyebrow">Preview 3D <span class="n">· arraste para girar · pinça/scroll = zoom</span></div>
-        <div class="vis" id="canvasWrap">
-          <div class="viewbtns">
-            <button class="vb on" data-v="iso">ISO</button>
-            <button class="vb" data-v="topo">TOPO</button>
-            <button class="vb" data-v="frente">FRENTE</button>
-          </div>
-        </div>
-        <div class="legenda" id="legenda"></div>
-        <div class="btnrow" style="margin-top:10px">
-          <button class="btn ghost" id="importNC" title="Simula um programa .NC e desenha o caminho da ferramenta no 3D">⬆ Importar .NC no preview</button>
-          <input type="file" id="fileNC" accept=".nc,.NC,.txt,.tap,.cnc,.mpf,.eia,.min,.prg" multiple style="display:none">
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="eyebrow">Programa gerado</div>
-        <div id="warns"></div>
-        <div class="codewrap">
-          <div class="codehead"><span id="linhas">0 linhas</span><span class="sp"></span><span id="nomeArq">MONTAGEM1.NC</span></div>
-          <pre id="saida"></pre>
-        </div>
-        <div class="btnrow">
-          <button class="btn primary" id="copiar">Copiar código</button>
-          <button class="btn" id="baixar">Baixar .NC</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
+</section>
+<div class="suite-foot">Montador Macro · Fanuc Macro B</div>
+</main>
+</div>
 </div>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -1178,41 +1185,10 @@ $("calcSF").addEventListener("click",()=>{
 });
 $("g-g53").addEventListener("change",refreshDebounced);
 
-/* Interface em etapas; o motor e os dados das estratégias permanecem intactos. */
-const oldCards=[...document.querySelectorAll('.cols .card')];
-const [configCard,paletteCard,sequenceCard,previewCard,programCard]=oldCards;
-const shell=document.createElement('div');
-shell.innerHTML=`<header class="suite-top"><div class="suite-brand">CNC <span>· Macro B</span></div><div class="suite-project">Projeto atual: <strong id="active-project"></strong></div></header>
-<div class="suite-shell"><nav class="suite-nav" aria-label="Etapas do projeto">
-${[['projects','▱','Projetos'],['drawing','⌁','Desenho 2D'],['parameters','⚙','Parâmetros'],['planning','☷','Planejamento'],['simulation','▷','Simulação'],['program','≡','Programa'],['settings','⚙','Configurações']].map(([id,icon,name])=>`<button type="button" data-stage="${id}" class="${id==='settings'?'settings':''}"><span class="nav-icon" aria-hidden="true">${icon}</span>${name}</button>`).join('')}</nav>
-<main class="suite-main"><div class="stage-heading"><h1 id="stage-title"></h1><p id="stage-description"></p></div>
-<section id="projects" class="stage" hidden><div class="card"><div class="eyebrow">Meu projeto</div><div class="project-summary"><span>Montagem atual</span><strong id="project-name"></strong><span id="project-count"></span></div><div id="project-actions" class="project-actions"></div><p class="hint">Salve sua montagem em um arquivo JSON para continuar depois. Use Abrir para recuperar um arquivo salvo.</p><div class="notice">Biblioteca com miniaturas, busca, clientes, lixeira e histórico de revisões: planejados.</div></div></section>
-<section id="drawing" class="stage" hidden><div class="card future"><span class="planned">Planejado</span><h2>Crie ou importe o contorno da peça</h2><p>A próxima construção desta etapa seguirá o desenho cotado da referência.</p><ul><li>Retas, arcos e furos; selecionar, mover, copiar, aparar, cotar e excluir.</li><li>Grade central com geometria branca, cotas ciano e seleção amarela.</li><li>Unidades, origem e confirmação da geometria no painel à direita.</li><li>Importação DXF e revisão da interpretação de PDF ou imagem.</li></ul></div></section>
-<section id="parameters" class="stage" hidden><div class="card future"><span class="planned">Planejado</span><h2>Medidas vinculadas</h2><p>Parâmetros da peça à esquerda, desenho cotado ao centro e relações entre medidas à direita.</p><ul><li>Comprimento, diâmetro e raio vinculados a entidades da geometria.</li><li>Manter proporções, recalcular geometria e conferir vínculos.</li><li>Indicação das operações que precisam de revisão após uma mudança.</li></ul><p>As medidas das operações existentes continuam disponíveis em Planejamento. O bloco de material está em Configurações.</p></div></section>
-<section id="planning" class="stage planning-grid"><div id="operations" class="card"><div class="eyebrow">Operações</div></div><div id="preview-slot"></div><aside id="inspector" class="card"><div class="eyebrow">Parâmetros da operação</div><h2 id="inspector-title"></h2><div id="inspector-fields"></div></aside></section>
-<section id="simulation" class="stage" hidden><div id="simulation-slot"></div><div class="notice">Prévia de volumes e trajetórias. Reprodução, tempo estimado e remoção de material ainda não implementados. Revise limites e fixação antes de usinar.</div></section>
-<section id="program" class="stage program-grid" hidden><div id="program-slot"></div><aside class="card"><div class="eyebrow">Parâmetros das operações</div><p class="hint">Valores atuais por operação. Edite em Planejamento. As variáveis # são reutilizadas no programa.</p><div class="table-scroll"><table class="param-table"><thead><tr><th>Descrição</th><th>Valor</th><th>Unidade</th></tr></thead><tbody id="program-params"></tbody></table></div><div class="btnrow"><button class="btn" id="save-program-project">Salvar montagem</button></div><div class="notice">Ajustes feitos na máquina precisam ser conferidos manualmente. Histórico de revisões e ficha de preparação: planejados.</div></aside></section>
-<section id="settings" class="stage" hidden></section><div class="suite-foot">Montador Macro · Fanuc Macro B</div></main></div>`;
-const oldColumns=document.querySelector('.cols');
-oldColumns.hidden=true;document.body.append(oldColumns);
-document.querySelector('.wrap').replaceChildren(...shell.childNodes);
-$('settings').append(configCard);
-$('operations').append($('qtd'),$('pilha'));
-const library=document.createElement('details');library.className='operation-library';library.open=true;
-library.innerHTML='<summary>＋ Adicionar operação</summary>';
-library.append($('paleta'),$('novoMacro'));$('operations').append(library);
-const actionRow=sequenceCard.querySelector('.btnrow');$('project-actions').append(actionRow);
-previewCard.id='preview-card';$('preview-slot').append(previewCard);
-$('program-slot').append(programCard);
-oldColumns.remove();
-programCard.querySelector('.eyebrow').textContent='Programa Macro B';
-$('baixar').textContent='Exportar .NC';$('baixar').classList.add('primary');$('copiar').classList.remove('primary');
-const programActions=$('save-program-project').parentElement;
-programActions.prepend($('baixar'),$('copiar'));
-programCard.querySelector('.btnrow').remove();
-const codeScroll=document.createElement('div');codeScroll.className='code-scroll';
-const codeGutter=document.createElement('pre');codeGutter.className='code-gutter';codeGutter.setAttribute('aria-hidden','true');
-$('saida').parentElement.append(codeScroll);codeScroll.append(codeGutter,$('saida'));
+/* Interface em etapas: o HTML já nasce no layout shell/stages; JS só alterna a seção visível. */
+const previewCard=$('preview-card');
+const library=document.querySelector('.operation-library');
+const codeGutter=document.querySelector('.code-gutter');
 function decorateCode(){
  const output=$('saida'),text=output.textContent;
  codeGutter.textContent=Array.from({length:text.split('\n').length},(_,i)=>i+1).join('\n');
