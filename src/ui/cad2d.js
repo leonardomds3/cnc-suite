@@ -12,8 +12,14 @@
    Etapa 4 (INSTRUCAO-CAD-CAM.md): entrada por valor (cadEntry/cadEntryPoint/cadPlacePoint)
    funciona igual para todas as ferramentas de desenho — só existe a partir do 2º ponto
    de cada forma, o 1º sempre vem de clique. Cota é uma entidade (type:'dim', sem valor
-   próprio: lê ao vivo de `ref` via cadSize/cadWriteSize) criada com a ferramenta "Cota"
-   sobre uma entidade previamente selecionada.
+   próprio: lê ao vivo de `ref` via cadSize/cadWriteSize).
+   Etapa 6 (INSTRUCAO-CAD-CAM.md): a cota nasce junto com a entidade — cadNewDim() monta
+   a cota com posição padrão, chamada por cadAdd/cadAddRect (freehand) e pelo preenchimento
+   de retrocompatibilidade em cadCarregar (entidades antigas sem cota); não existe mais
+   ferramenta "Cota" de criação. Excluir a cota (selecioná-la e Excluir/Delete) apaga só
+   ela — cadDelete já tratava isso, pois só remove a entidade cujo id está selecionado (e,
+   à parte, as cotas que referenciam uma entidade removida). O interruptor "Cotas" da barra
+   (cadShowDim) esconde todas de uma vez sem apagar nenhuma.
    Etapa 5 (INSTRUCAO-CAD-CAM.md): cadShape/cadEndpoints/cadDimGroup/cadEscala são
    reaproveitadas por src/ui/desenho2d.js (carregado depois) para desenhar a
    geometria real do CAD na aba Parâmetros — mesma aparência, sem duplicar lógica.
@@ -31,7 +37,7 @@ const CAD_FIELDS={line:[['x','X inicial'],['y','Y inicial'],['x2','X final'],['y
    que o vínculo de medida (cadWriteSize/cadApplyLinks) já usa. */
 const CAD_MEDIDA_LABELS={comprimento:'Comprimento',raio:'Raio'};
 function cadMedida(type){return type==='line'?'comprimento':'raio';}
-let CAD={version:1,next:1,entities:[]},cadSelected=new Set(),cadTool='select',cadPoints=[],cadHover=null,cadDrag=null,cadShowDim=true,cadDimRef=null,cadEntry=null;
+let CAD={version:1,next:1,entities:[]},cadSelected=new Set(),cadTool='select',cadPoints=[],cadHover=null,cadDrag=null,cadShowDim=true,cadEntry=null;
 let cadView={x:-120,y:-90,w:240,h:180},cadUndo=[],cadRedo=[];
 const cadClone=x=>JSON.parse(JSON.stringify(x));
 const cadAngle=(c,p)=>(Math.atan2(p.y-c.y,p.x-c.x)*180/Math.PI+360)%360;
@@ -70,10 +76,23 @@ function cadNew(type,points){
  if(type==='line')Object.assign(e,{x2:b.x,y2:b.y});
  if(type==='circle'||type==='arc')e.r=Math.hypot(b.x-a.x,b.y-a.y);
  if(type==='arc')Object.assign(e,{a0:cadAngle(a,b),a1:cadAngle(a,points[2])});
- if(type==='dim'){const refEntity=CAD.entities.find(x=>x.id===cadDimRef);Object.assign(e,{ref:cadDimRef,medida:refEntity?cadMedida(refEntity.type):'comprimento'});}
  return e;
 }
-function cadAdd(e){return cadCommit(next=>{const id=next.next++;next.entities.push({...e,id});cadSelected=new Set([id]);});}
+/* Etapa 6: posição padrão da cota ao nascer com a entidade — reta ganha cota
+   deslocada da metade do segmento, perpendicular a ele; círculo/arco ganham cota
+   a 45° saindo do centro. Sempre um valor "sensato", nunca zero/sobreposto. */
+function cadNewDim(e){
+ const dim={type:'dim',ref:e.id,medida:cadMedida(e.type)};
+ if(e.type==='line'){
+  const dx=e.x2-e.x,dy=e.y2-e.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len,off=Math.max(len*.18,4);
+  dim.x=cadRound((e.x+e.x2)/2+nx*off);dim.y=cadRound((e.y+e.y2)/2+ny*off);
+ } else {
+  const ang=Math.PI/4,off=Math.max(e.r*.35,4);
+  dim.x=cadRound(e.x+(e.r+off)*Math.cos(ang));dim.y=cadRound(e.y+(e.r+off)*Math.sin(ang));
+ }
+ return dim;
+}
+function cadAdd(e){return cadCommit(next=>{const id=next.next++;const full={...e,id};next.entities.push(full);const dimId=next.next++;next.entities.push({...cadNewDim(full),id:dimId});cadSelected=new Set([id]);});}
 /* Etapa 5: "Retângulo" é atalho de construção — os dois pontos viram 4 `line`
    independentes (para poder selecionar/cotar/apagar cada lado), compartilhando
    `rectGrupo` só como marca de origem (agrupamento futuro, ex. Aparar). */
@@ -89,7 +108,10 @@ function cadAddRect(points){
  const [a,b]=points;
  return cadCommit(next=>{
   const grupo=next.next,ids=[];
-  cadRectLines(a,b,grupo).forEach(linha=>{const id=next.next++;next.entities.push({...linha,id});ids.push(id);});
+  cadRectLines(a,b,grupo).forEach(linha=>{
+   const id=next.next++;const full={...linha,id};next.entities.push(full);ids.push(id);
+   const dimId=next.next++;next.entities.push({...cadNewDim(full),id:dimId});
+  });
   cadSelected=new Set(ids);
  });
 }
@@ -109,7 +131,7 @@ function cadEntryPoint(){
 }
 function cadPlacePoint(p){
  cadPoints.push(p);
- const need=cadTool==='arc'?3:cadTool==='dim'?1:2;
+ const need=cadTool==='arc'?3:2;
  if(cadPoints.length===need){if(cadTool==='rect')cadAddRect(cadPoints);else cadAdd(cadNew(cadTool,cadPoints));cadPoints=[];cadHover=null;}
  cadEntry=null;
  cadRenderCanvas();
@@ -192,9 +214,9 @@ function cadRenderCanvas(){
  let body=`<defs><pattern id="cad-grid-pattern" width="${grid}" height="${grid}" patternUnits="userSpaceOnUse"><path d="M${grid} 0H0V${grid}" fill="none" stroke="#1c3a4d" stroke-width=".5" vector-effect="non-scaling-stroke"/></pattern></defs><rect x="${cadView.x}" y="${cadView.y}" width="${cadView.w}" height="${cadView.h}" fill="url(#cad-grid-pattern)"/><path d="M${cadView.x} 0H${cadView.x+cadView.w} M0 ${cadView.y}V${cadView.y+cadView.h}" stroke="#255e74" fill="none" vector-effect="non-scaling-stroke" stroke-width="1"/>`;
  CAD.entities.forEach(source=>{
   const e=cadDrag?.kind==='move'&&source.id===cadDrag.id?cadDrag.preview:source;
-  if(e.type==='dim'){body+=cadDimGroup(e,font,cadSelected.has(e.id));return;}
+  if(e.type==='dim'){if(cadShowDim)body+=cadDimGroup(e,font,cadSelected.has(e.id));return;}
   body+=cadShape(e,'cad-hit',true)+cadShape(e,'cad-shape'+(cadSelected.has(e.id)?' selected':''),true);
-  if(cadShowDim){const label=e.type==='line'?'L '+fnum(cadSize(e)):'R '+fnum(e.r);body+=`<text class="cad-dimension" x="${e.x}" y="${-e.y-font}" font-size="${font}">${label}${e.link!=null?' ↔ #'+e.link:''}</text>`;}
+  if(cadShowDim&&e.link!=null)body+=`<text class="cad-dimension" x="${e.x}" y="${-e.y-font}" font-size="${font}">↔ #${e.link}</text>`;
  });
  const hp=cadEntry?(cadEntryPoint()||cadHover):cadHover;
  if(cadPoints.length&&hp){try{
@@ -210,7 +232,7 @@ function cadRenderCanvas(){
   body+=`<g class="cad-entry-box" transform="translate(${ox},${oy})"><rect x="0" y="${-font*1.3}" width="${font*7}" height="${font*2.6}" rx="${font*.3}"/><text class="${cadEntry.field==='length'?'active':''}" x="${font*.3}" y="${-font*.55}" font-size="${font}">L ${lenTxt}</text><text class="${cadEntry.field==='angle'?'active':''}" x="${font*.3}" y="${font*.85}" font-size="${font}">∠ ${angTxt}°</text></g>`;
  }
  svg.innerHTML=body;
- const names={select:'Selecione uma entidade para editar suas coordenadas.',move:'Arraste uma entidade para mover.',pan:'Arraste para deslocar a vista.',line:cadPoints.length?'Clique o ponto final ou digite a medida.':'Clique o ponto inicial.',rect:cadPoints.length?'Clique o canto oposto ou digite a medida.':'Clique o primeiro canto.',circle:cadPoints.length?'Clique para definir o raio ou digite a medida.':'Clique o centro.',arc:cadPoints.length===2?'Clique a direção final do arco anti-horário ou digite o ângulo.':cadPoints.length?'Clique o início do arco ou digite a medida.':'Clique o centro do arco.',dim:'Clique onde a cota deve aparecer.'};
+ const names={select:'Selecione uma entidade para editar suas coordenadas.',move:'Arraste uma entidade (ou sua cota) para mover.',pan:'Arraste para deslocar a vista.',line:cadPoints.length?'Clique o ponto final ou digite a medida.':'Clique o ponto inicial.',rect:cadPoints.length?'Clique o canto oposto ou digite a medida.':'Clique o primeiro canto.',circle:cadPoints.length?'Clique para definir o raio ou digite a medida.':'Clique o centro.',arc:cadPoints.length===2?'Clique a direção final do arco anti-horário ou digite o ângulo.':cadPoints.length?'Clique o início do arco ou digite a medida.':'Clique o centro do arco.'};
  $('cad-help').textContent=names[cadTool]+(cadHover?`  X ${fnum(cadHover.x)} · Y ${fnum(cadHover.y)} mm`:'')+(cadEntry?'  ·  Tab: comprimento/ângulo · Enter confirma · Esc cancela o valor':'');
 }
 function cadRenderProperties(){
@@ -314,18 +336,12 @@ function cadInit(){
  const modes=document.createElement('div');modes.className='drawing-modes';modes.innerHTML='<button id="cad-mode" aria-pressed="true">Desenho livre</button><button id="matrix-mode" aria-pressed="false">Padrão de furos vinculado</button>';
  const matrix=document.createElement('div');matrix.id='matrix-mode-content';matrix.className='drawing-mode draft-grid';matrix.hidden=true;matrix.append(...drawingChildren);
  const free=document.createElement('div');free.id='cad-mode-content';free.className='drawing-mode cad-grid';
- free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><button id="cad-criar-furacao" class="btn primary" disabled>+ Criar furação</button><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button id="cad-trim" disabled title="Em construção">Aparar</button><button data-cad-tool="dim" title="Selecione uma entidade e clique onde a cota deve aparecer.">Cota</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho ou digite a medida (comprimento/ângulo, Tab alterna, Enter confirma). Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input id="cad-showdim" type="checkbox" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
+ free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><button id="cad-criar-furacao" class="btn primary" disabled>+ Criar furação</button><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button id="cad-trim" disabled title="Em construção">Aparar</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho ou digite a medida (comprimento/ângulo, Tab alterna, Enter confirma). Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input id="cad-showdim" type="checkbox" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
  $('drawing').append(modes,free,matrix);
  function cadMode(isFree){free.hidden=!isFree;matrix.hidden=isFree;$('cad-mode').setAttribute('aria-pressed',String(isFree));$('matrix-mode').setAttribute('aria-pressed',String(!isFree));cadPoints=[];cadHover=null;cadEntry=null;cadRenderCanvas();}
  $('cad-mode').addEventListener('click',()=>cadMode(true));$('matrix-mode').addEventListener('click',()=>cadMode(false));
  document.querySelectorAll('[data-cad-tool]').forEach(b=>b.addEventListener('click',()=>{
-  const tool=b.dataset.cadTool;
-  if(tool==='dim'){
-   const ids=[...cadSelected],ref=ids.length===1?CAD.entities.find(x=>x.id===ids[0]):null;
-   if(!ref||ref.type==='dim'){$('cad-message').textContent='Selecione uma reta, círculo ou arco antes de usar Cota.';return;}
-   cadDimRef=ref.id;
-  }
-  cadTool=tool;cadPoints=[];cadHover=null;cadEntry=null;cadRender();
+  cadTool=b.dataset.cadTool;cadPoints=[];cadHover=null;cadEntry=null;cadRender();
  }));
  $('cad-delete').addEventListener('click',cadDelete);
  $('cad-criar-furacao').addEventListener('click',()=>{
@@ -421,7 +437,15 @@ function cadCarregar(data){
   const ids=new Set();
   const entities=raw.map(e=>{if(!Number.isSafeInteger(e.id)||e.id<1||ids.has(e.id)||!cadValid(e))throw Error('Entidade de desenho inválida.');ids.add(e.id);const clean={id:e.id,type:e.type};CAD_FIELDS[e.type].forEach(([k])=>clean[k]=e[k]);if(e.link!=null&&e.type!=='dim')clean.link=e.link;if(e.desenho2D)clean.desenho2D=e.desenho2D;if(e.type==='line'&&e.rectGrupo!=null)clean.rectGrupo=e.rectGrupo;if(e.type==='dim'){clean.ref=e.ref;clean.medida=e.medida;}return clean;});
   cadApplyLinks(entities);
-  CAD={version:1,next:Math.max(0,...ids)+1,entities};
+  /* Etapa 6: retrocompatibilidade — projeto salvo antes desta etapa pode ter
+     reta/círculo/arco desenhado à mão sem cota (a cota era opcional, criada por
+     ferramenta). Completa as que faltam com a mesma posição padrão do desenho
+     novo, para o invariante "toda entidade nasce cotada" valer também ao abrir.
+     Não mexe em furo de matriz (`desenho2D`) — esses nunca tiveram cota própria. */
+  let nextId=Math.max(0,...ids)+1;
+  const comCota=new Set(entities.filter(e=>e.type==='dim').map(e=>e.ref));
+  entities.filter(e=>e.type!=='dim'&&!e.desenho2D&&!comCota.has(e.id)).forEach(e=>entities.push({...cadNewDim(e),id:nextId++}));
+  CAD={version:1,next:nextId,entities};
  }
 }
 const CAD2D = { init: cadInit, render: cadRender, fit: cadFit, salvar: cadSalvar, carregar: cadCarregar, entidades: () => CAD.entities, substituirOrigem: cadSubstituirOrigem };
