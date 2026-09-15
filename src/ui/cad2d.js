@@ -13,7 +13,10 @@
    funciona igual para todas as ferramentas de desenho — só existe a partir do 2º ponto
    de cada forma, o 1º sempre vem de clique. Cota é uma entidade (type:'dim', sem valor
    próprio: lê ao vivo de `ref` via cadSize/cadWriteSize) criada com a ferramenta "Cota"
-   sobre uma entidade previamente selecionada. */
+   sobre uma entidade previamente selecionada.
+   Etapa 5 (INSTRUCAO-CAD-CAM.md): cadShape/cadEndpoints/cadDimGroup/cadEscala são
+   reaproveitadas por src/ui/desenho2d.js (carregado depois) para desenhar a
+   geometria real do CAD na aba Parâmetros — mesma aparência, sem duplicar lógica. */
 const CAD_NAMES={line:'Reta',rect:'Retângulo',circle:'Círculo',arc:'Arco',dim:'Cota'};
 const CAD_GROUP_ORDER=['line','rect','arc','circle','dim'];
 const CAD_GROUP_LABELS={line:'Retas',rect:'Retângulos',arc:'Arcos',circle:'Furos',dim:'Cotas'};
@@ -103,6 +106,56 @@ function cadSnap(point,exclude){
  if($('cad-grid-snap').checked&&Number.isFinite(grid)&&grid>=.001&&grid<=1000)p={x:Math.round(p.x/grid)*grid,y:Math.round(p.y/grid)*grid};
  return {x:cadRound(p.x),y:cadRound(p.y)};
 }
+/* Etapa 5c (INSTRUCAO-CAD-CAM.md): escala real de tela (px por unidade de mundo),
+   via getScreenCTM — não só largura/viewBox.w, que erra quando a proporção do
+   viewBox não bate com a do elemento (o "meet" do preserveAspectRatio passa a
+   limitar pela altura). Usada para texto e traços de cota em tamanho de tela
+   constante, com vector-effect="non-scaling-stroke" nas linhas. */
+function cadEscala(svg){
+ const ctm=svg.getScreenCTM&&svg.getScreenCTM();
+ if(ctm&&ctm.a)return ctm.a;
+ const vb=svg.viewBox.baseVal;
+ return Math.max(400,svg.clientWidth||640)/((vb&&vb.width)||1);
+}
+/* Etapa 5b: cota como desenho técnico — linhas de chamada perpendiculares à
+   medida (reta/retângulo) ou saindo do centro (raio), linha de cota com setas
+   e texto centrado, em vez do <text> solto de antes. O ponto clicado pelo
+   usuário (e.x,e.y) continua sendo o único controle de posição/deslocamento.
+   Reaproveitada pela vista real da aba Parâmetros (desenho2d.js). */
+function cadDimGroup(e,font,sel){
+ const ref=CAD.entities.find(x=>x.id===e.ref);
+ const hit=`<circle class="cad-dim-hit" data-cad-id="${e.id}" cx="${e.x}" cy="${-e.y}" r="${font*.8}"/>`;
+ const textCls='cad-dim-entity'+(sel?' selected':'');
+ if(!ref)return hit+`<text class="${textCls}" data-cad-id="${e.id}" x="${e.x}" y="${-e.y}" text-anchor="middle" style="font-size:${font}px">?</text>`;
+ const cls='cad-dim-line'+(sel?' selected':''),overshoot=font*.6,arrow=font*.9,wing=arrow*.4;
+ const tx=p=>({x:p.x,y:-p.y});
+ const arrowPath=(p,ux,uy)=>{
+  const back={x:p.x-ux*arrow,y:p.y-uy*arrow},nx=-uy,ny=ux;
+  const w1=tx({x:back.x+nx*wing,y:back.y+ny*wing}),w2=tx({x:back.x-nx*wing,y:back.y-ny*wing}),P=tx(p);
+  return `<path class="${cls}" d="M${w1.x},${w1.y} L${P.x},${P.y} L${w2.x},${w2.y}"/>`;
+ };
+ let linhas,textX,textY,prefixo='';
+ if(e.medida==='raio'){
+  const c0={x:ref.x,y:ref.y},vx=e.x-c0.x,vy=e.y-c0.y,dist=Math.hypot(vx,vy)||1,ux=vx/dist,uy=vy/dist;
+  const P={x:c0.x+ux*ref.r,y:c0.y+uy*ref.r},ponta=dist>ref.r?{x:e.x,y:e.y}:P;
+  const C0=tx(c0),Pt=tx(ponta);
+  linhas=`<path class="${cls}" d="M${C0.x},${C0.y} L${Pt.x},${Pt.y}"/>`+arrowPath(P,ux,uy);
+  prefixo='R';textX=e.x;textY=e.y;
+ } else {
+  const p1={x:ref.x,y:ref.y},p2=ref.type==='line'?{x:ref.x2,y:ref.y2}:{x:ref.x+ref.w,y:ref.y};
+  const dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.hypot(dx,dy)||1,dirx=dx/len,diry=dy/len,nx=-diry,ny=dirx;
+  const offset=(e.x-p1.x)*nx+(e.y-p1.y)*ny,sign=offset>=0?1:-1;
+  const d1={x:p1.x+nx*offset,y:p1.y+ny*offset},d2={x:p2.x+nx*offset,y:p2.y+ny*offset};
+  const ext1={x:p1.x+nx*(offset+sign*overshoot),y:p1.y+ny*(offset+sign*overshoot)};
+  const ext2={x:p2.x+nx*(offset+sign*overshoot),y:p2.y+ny*(offset+sign*overshoot)};
+  const P1=tx(p1),P2=tx(p2),D1=tx(d1),D2=tx(d2),E1=tx(ext1),E2=tx(ext2);
+  linhas=`<path class="${cls}" d="M${P1.x},${P1.y} L${E1.x},${E1.y} M${P2.x},${P2.y} L${E2.x},${E2.y} M${D1.x},${D1.y} L${D2.x},${D2.y}"/>`
+   +arrowPath(d1,-dirx,-diry)+arrowPath(d2,dirx,diry);
+  textX=(d1.x+d2.x)/2;textY=(d1.y+d2.y)/2;
+ }
+ const T=tx({x:textX,y:textY}),val=fnum(cadSize(ref));
+ return hit+linhas+`<text class="${textCls}" data-cad-id="${e.id}" x="${T.x}" y="${T.y}" text-anchor="middle" style="font-size:${font}px">${prefixo}${val}</text>`;
+}
 function cadShape(e,cls,hit=false){
  const attrs=`class="${cls}" ${hit?`data-cad-id="${e.id}"`:''}`;
  if(e.type==='line')return `<line ${attrs} x1="${e.x}" y1="${-e.y}" x2="${e.x2}" y2="${-e.y2}"/>`;
@@ -114,15 +167,11 @@ function cadShape(e,cls,hit=false){
 function cadRenderCanvas(){
  const svg=$('cad-svg');svg.setAttribute('viewBox',`${cadView.x} ${cadView.y} ${cadView.w} ${cadView.h}`);
  const step=Number($('cad-grid-step').value),grid=Number.isFinite(step)&&step>=.001&&step<=1000?Math.max(step,cadView.w/200):5;
- const font=cadView.w*12/Math.max(400,svg.clientWidth||640);
+ const font=12/cadEscala(svg);
  let body=`<defs><pattern id="cad-grid-pattern" width="${grid}" height="${grid}" patternUnits="userSpaceOnUse"><path d="M${grid} 0H0V${grid}" fill="none" stroke="#1c3a4d" stroke-width=".5" vector-effect="non-scaling-stroke"/></pattern></defs><rect x="${cadView.x}" y="${cadView.y}" width="${cadView.w}" height="${cadView.h}" fill="url(#cad-grid-pattern)"/><path d="M${cadView.x} 0H${cadView.x+cadView.w} M0 ${cadView.y}V${cadView.y+cadView.h}" stroke="#255e74" fill="none" vector-effect="non-scaling-stroke" stroke-width="1"/>`;
  CAD.entities.forEach(source=>{
   const e=cadDrag?.kind==='move'&&source.id===cadDrag.id?cadDrag.preview:source;
-  if(e.type==='dim'){
-   const ref=CAD.entities.find(x=>x.id===e.ref),val=ref?fnum(cadSize(ref)):'?',sel=cadSelected.has(e.id);
-   body+=`<circle class="cad-dim-hit" data-cad-id="${e.id}" cx="${e.x}" cy="${-e.y}" r="${font*.8}"/><text class="cad-dim-entity${sel?' selected':''}" data-cad-id="${e.id}" x="${e.x}" y="${-e.y}" font-size="${font}">${val}</text>`;
-   return;
-  }
+  if(e.type==='dim'){body+=cadDimGroup(e,font,cadSelected.has(e.id));return;}
   body+=cadShape(e,'cad-hit',true)+cadShape(e,'cad-shape'+(cadSelected.has(e.id)?' selected':''),true);
   if(cadShowDim){const label=e.type==='line'?'L '+fnum(cadSize(e)):e.type==='rect'?fnum(e.w)+' × '+fnum(e.h):'R '+fnum(e.r);body+=`<text class="cad-dimension" x="${e.x}" y="${-e.y-font}" font-size="${font}">${label}${e.link!=null?' ↔ #'+e.link:''}</text>`;}
  });

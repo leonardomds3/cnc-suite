@@ -8,7 +8,13 @@
    botões depois de CAD2D.init()).
    Superfície exposta: DESENHO2D = { render, aplicar, avisos, salvar, carregar, sincronizado }.
    A matriz de furos não cria operação (SEQ) — ela só gera geometria no CAD; virar
-   operação de furação a partir da geometria é trabalho da etapa 3. */
+   operação de furação a partir da geometria é trabalho da etapa 3.
+   Etapa 5a (INSTRUCAO-CAD-CAM.md): a aba Parâmetros (#param-svg) não desenha mais
+   `DESENHO.p` — desenharGeometriaReal() renderiza CAD2D.entidades() de verdade,
+   reaproveitando cadShape/cadEndpoints/cadDimGroup/cadEscala de cad2d.js (carregado
+   antes deste arquivo). A aba Desenho 2D (#draw-svg, modo "Padrão de furos
+   vinculado") continua usando desenharSVG()/DESENHO.p sem mudança — ali a figura é
+   uma prévia do que ainda vai ser confirmado no CAD, não a geometria já existente. */
 
 /* Primeiro vínculo CAD -> geometria: retângulo e matriz de furos.
    Nenhuma decisão automática de condição de corte ou remoção do contorno. */
@@ -104,9 +110,22 @@ function desenharSVG(svg){
  rows.forEach((row,j)=>{for(let i=0;i<row.n;i++){const X=cx+(row.x0+i*row.ix)*scale,Y=cy-row.y0*scale;holes+=`<g><circle class="hole ${desenhoSelecao==='furos'?'selected':''}" cx="${X}" cy="${Y}" r="${p.diametro/2*scale}"/><path class="center-mark" d="M${X-7},${Y}h14 M${X},${Y-7}v14"/></g>`;}});
  svg.innerHTML=`<defs><pattern id="${prefix}-grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#173343" stroke-width=".5"/></pattern><marker id="${prefix}-arrow" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto-start-reverse"><path d="M5 0L0 2.5L5 5" fill="none" stroke="#24c8de"/></marker></defs><rect width="640" height="480" fill="url(#${prefix}-grid)"/><rect class="geometry ${desenhoSelecao==='contorno'?'selected':''}" x="${x}" y="${y}" width="${W}" height="${H}"/>${holes}<g class="dimension"><path d="M${x},${y-8}V${y-35} M${x+W},${y-8}V${y-35}"/><path marker-start="url(#${prefix}-arrow)" marker-end="url(#${prefix}-arrow)" d="M${x},${y-26}H${x+W}"/><path d="M${x+W+8},${y}H${x+W+35} M${x+W+8},${y+H}H${x+W+35}"/><path marker-start="url(#${prefix}-arrow)" marker-end="url(#${prefix}-arrow)" d="M${x+W+26},${y}V${y+H}"/><path d="M${cx-10},${cy}h20 M${cx},${cy-10}v20"/></g><text x="${cx}" y="${y-34}" text-anchor="middle">${fnum(p.largura)}</text><text x="${x+W+35}" y="${cy}" transform="rotate(90 ${x+W+35} ${cy})" text-anchor="middle">${fnum(p.altura)}</text><text x="${x}" y="${y+H+35}">${p.nx*p.ny} × Ø${fnum(p.diametro)} · margens X ${fnum(p.mx)} / Y ${fnum(p.my)}</text><path class="dimension" d="M35 435h35 M35 435v-35"/><text x="75" y="440">X</text><text x="30" y="390">Y</text>`;
 }
+/* Etapa 5a: mesmo enquadramento automático do cadFit() (bounding box + margem de
+   20%), mas com viewBox próprio — este SVG não compartilha estado de zoom/pan
+   com o CAD 2D livre, sempre reenquadra tudo a cada render. */
+function desenharGeometriaReal(svg){
+ const entidades=CAD2D.entidades(),formas=entidades.filter(e=>e.type!=='dim');
+ if(!formas.length){svg.setAttribute('viewBox','0 0 640 480');svg.innerHTML='<text x="320" y="240" text-anchor="middle">Nenhuma geometria desenhada. Use o Desenho 2D.</text>';return;}
+ const pts=formas.flatMap(e=>e.type==='circle'||e.type==='arc'?[{x:e.x-e.r,y:e.y-e.r},{x:e.x+e.r,y:e.y+e.r}]:cadEndpoints(e));
+ const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+ const pad=Math.max(maxX-minX,maxY-minY,10)*.2;
+ svg.setAttribute('viewBox',`${minX-pad} ${-maxY-pad} ${Math.max(maxX-minX,1)+2*pad} ${Math.max(maxY-minY,1)+2*pad}`);
+ const font=12/cadEscala(svg);
+ svg.innerHTML=entidades.map(e=>e.type==='dim'?cadDimGroup(e,font,false):cadShape(e,'cad-shape')).join('');
+}
 function renderDesenhos(){
  const errors=validarDesenho(DESENHO.p),warnings=avisosDesenho(),sync=desenhoSincronizado();
- document.querySelectorAll('.draft-svg').forEach(desenharSVG);
+ document.querySelectorAll('.draft-svg').forEach(svg=>svg.id==='param-svg'?desenharGeometriaReal(svg):desenharSVG(svg));
  document.querySelectorAll('[data-drawing-select]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.drawingSelect===desenhoSelecao)));
  document.querySelectorAll('[data-drawing-count]').forEach(el=>el.textContent=errors.length?'Geometria incompleta':`${DESENHO.p.nx*DESENHO.p.ny} furos · ${DESENHO.p.ny} fileiras`);
  document.querySelectorAll('[data-drawing-status]').forEach(el=>{el.className='draft-status '+(errors.length?'invalid':sync&&!warnings.length?'':'pending');el.textContent=errors.length?errors.join(' '):(sync?'Geometria vinculada ao CAD 2D.':'Alterações aguardam confirmação para atualizar o CAD 2D.')+(warnings.length?' '+warnings.join(' '):'');});
