@@ -18,7 +18,7 @@ Uma aplicação HTML para montar visualmente código G de usinagem no padrão Fa
 ├─ src/
 │  ├─ core/          ← domínio puro, sem DOM (ex-engine.js)
 │  │   formato.js · simulador.js · operacoes.js · macros.js
-│  │   fichas.js · programa.js · corte.js
+│  │   fichas.js · features.js · programa.js · corte.js
 │  └─ ui/            ← tudo que toca o DOM
 │      cad2d.js · preview3d.js · modal-macro.js
 │      pilha.js · paleta.js · desenho2d.js
@@ -46,6 +46,7 @@ Uma aplicação HTML para montar visualmente código G de usinagem no padrão Fa
 <script src="src/core/operacoes.js">
 <script src="src/core/macros.js">
 <script src="src/core/fichas.js">
+<script src="src/core/features.js">
 <script src="src/core/programa.js">
 <script src="src/core/corte.js">
 <script src="dados/estrategias.js">
@@ -77,7 +78,7 @@ Rode isso como teste principal a cada mudança em `src/core/` — roda em segund
 
 ## Arquitetura principal (`src/core/`, ex-`engine.js`)
 
-O antigo `engine.js` (monólito de ~875 linhas) foi quebrado em sete módulos por responsabilidade — a lógica de usinagem em si não mudou, só a organização em arquivos:
+O antigo `engine.js` (monólito de ~875 linhas) foi quebrado em módulos por responsabilidade — a lógica de usinagem em si não mudou, só a organização em arquivos:
 
 | Módulo | Responsabilidade |
 |---|---|
@@ -85,7 +86,8 @@ O antigo `engine.js` (monólito de ~875 linhas) foi quebrado em sete módulos po
 | `operacoes.js` | operações nativas (`DEFS`, `ORDEM`): faceamento e furação em linha/círculo |
 | `macros.js` | macros cruas cadastradas pelo usuário (`CUSTOM`/`registrarCustom`) |
 | `fichas.js` | interpretador de estratégias em JSON (`avaliarExpr`, `interpretarEstrategia`, `registrarEstrategia`) |
-| `programa.js` | estado da sequência de blocos (`SEQ`/`SELECIONADO`/`UID`), `cfg()` e montagem final do G-code (`gerarPrograma`, `coletarWarns`) |
+| `features.js` | deriva parâmetros de operação a partir de entidades do CAD 2D (`FEATURES.furos/contorno/limites`) — puro, recebe o array de entidades já lido por quem chama (Etapa 3, `INSTRUCAO-CAD-CAM.md`) |
+| `programa.js` | estado da sequência de blocos (`SEQ`/`SELECIONADO`/`UID`), `cfg()`, resolução de blocos ancorados em geometria (`paramsEfetivos`) e montagem final do G-code (`gerarPrograma`, `coletarWarns`) |
 | `simulador.js` | interpretador Fanuc/Macro B (`execNC`) — sem dependências de outros módulos |
 | `corte.js` | parâmetros de corte por material (Vc/fz) e helpers puros do modal "Cadastrar macro" |
 
@@ -106,6 +108,9 @@ DEFS[id] = {
 `ORDEM` define a ordem de exibição dos ids nativos na paleta.
 
 Adicionar uma operação nativa significa incluir uma entrada em `DEFS` e seu id em `ORDEM` **em `src/core/operacoes.js`**. Mas o caminho preferido pra operação nova é **ficha JSON de estratégia**, não código nativo (ver a decisão firme nº 2 do DIARIO.md e a regra de decisão da seção 3 abaixo).
+
+### Operação ancorada em geometria — `geo` (Etapa 3, `INSTRUCAO-CAD-CAM.md`)
+Um bloco de `SEQ` pode trazer um campo `geo: [id, id, ...]` — ids de entidades do CAD 2D (`src/ui/cad2d.js`) que ancoram a operação. `geo` é **opcional**: bloco sem `geo` funciona exatamente como antes, com os parâmetros digitados em `p`; é assim que projetos `.json` salvos antes da Etapa 3 continuam abrindo e gerando o mesmo programa. `paramsEfetivos(b)` (`src/core/programa.js`) resolve `geo` em params efetivos antes de toda chamada a `DEFS[...].warn/gerar/volume` (em `gerarPrograma`, `coletarWarns` e `refresh3D`): busca as entidades referenciadas via `CAD2D.entidades()` e injeta `p.furos = FEATURES.furos(entidades)` — `DEFS[tipo].gerar/warn/volume` checam `if(p.furos)` para usar a via nova (posições literais das entidades) em vez da via antiga (campos digitados). Um param de `DEFS[tipo].params` marcado `geo:true` some do formulário (`src/ui/pilha.js`) quando o bloco tem `geo` — é assim que `furosL` esconde X/Y/incremento/quantidade/diâmetro e mostra só profundidade/avanço/ferramenta quando ancorado. O botão "Criar furação" (`src/ui/cad2d.js`, painel de desenho livre) monta esse bloco a partir da seleção atual de círculos via `addBloco('furosL', {geo:[...]})` (`src/ui/paleta.js`).
 
 ### Macros personalizadas do usuário
 O usuário pode colar código Macro B bruto (com tokens `{parametro}`, além dos tokens reservados `{DIAM}`/`{RF}` para Ø/raio da ferramenta ativa) através do modal "Cadastrar macro" (`src/ui/modal-macro.js`). `registrarCustom(id, raw)` (`src/core/macros.js`) encapsula essa definição bruta em uma entrada `DEFS[id]` normal:
@@ -148,10 +153,10 @@ Sem backend e sem `localStorage`/`sessionStorage` — "Salvar montagem" serializ
 
 ## Arquitetura de interface (`src/ui/`)
 
-- `cad2d.js` — CAD 2D local do Montador: entidades geométricas independentes do percurso CNC (reta, retângulo, círculo, arco), com seleção, undo/redo, snap em grade/pontos, vínculo de medida principal entre entidades e zoom/pan. Superfície exposta: `CAD2D = { init, render, fit, salvar, carregar, entidades, substituirOrigem }` — `substituirOrigem(origem, novas)` troca só as entidades marcadas com aquele `desenho2D.origem`, preservando as desenhadas à mão. Depende de `$` e `fnum` (globais definidos pelo HTML host); carregado logo após `dados/estrategias.js`.
-- `preview3d.js` — preview 3D (Three.js) do Montador: cena, câmera, bloco de material, volumes de remoção por operação e caminho de ferramenta dos `.NC` importados. Mapeamento CNC → cena: `three(x, z, -y)` · Z0 = topo do bloco. Depende de globais definidos no `<script>` principal do HTML.
+- `cad2d.js` — CAD 2D local do Montador: entidades geométricas independentes do percurso CNC (reta, retângulo, círculo, arco), com seleção, undo/redo, snap em grade/pontos, vínculo de medida principal entre entidades e zoom/pan. Superfície exposta: `CAD2D = { init, render, fit, salvar, carregar, entidades, substituirOrigem }` — `substituirOrigem(origem, novas)` troca só as entidades marcadas com aquele `desenho2D.origem`, preservando as desenhadas à mão. Depende de `$` e `fnum` (globais definidos pelo HTML host); carregado logo após `dados/estrategias.js`. Acoplamento com o domínio de operações (Etapa 3): o botão "Criar furação" chama `addBloco('furosL',{geo})` (`paleta.js`) e `showStage()`; `cadCommit()` chama `refreshDebounced()` a cada mudança de geometria, para o G-code de blocos ancorados (`geo`) não ficar desatualizado.
+- `preview3d.js` — preview 3D (Three.js) do Montador: cena, câmera, bloco de material, volumes de remoção por operação e caminho de ferramenta dos `.NC` importados. Mapeamento CNC → cena: `three(x, z, -y)` · Z0 = topo do bloco. Depende de globais definidos no `<script>` principal do HTML, incluindo `paramsEfetivos()` (`programa.js`) para resolver blocos ancorados em geometria antes de chamar `DEFS[...].volume()`.
 - `modal-macro.js` — modal "Cadastrar/editar macro": formulário de parâmetros, checagem de tokens/variáveis `#` do código colado e persistência via `registrarCustom`/`removerCustom`.
-- `pilha.js` — pilha de blocos: renderização dos cards de operação, campos condicionais/saídas de ficha, edição, reordenar/duplicar/remover, salvar/abrir/limpar montagem e copiar/baixar o G-code gerado.
+- `pilha.js` — pilha de blocos: renderização dos cards de operação, campos condicionais/saídas de ficha (esconde campos `geo:true` quando o bloco está ancorado, ver seção "Operação ancorada em geometria"), edição, reordenar/duplicar/remover, salvar/abrir/limpar montagem e copiar/baixar o G-code gerado.
 - `paleta.js` — paleta de operações (botões que adicionam blocos à pilha). Depende de `ORDEM`/`DEFS`/`CUSTOM`/`ESTRATEGIAS` (core), `F_TROCA`, `SEQ`, `UID`, `SELECIONADO`, `toast()`, `renderPilha()`, `refresh()`, `abrirEditor()` (modal-macro.js).
 - `desenho2d.js` — vínculo entre o desenho guiado (retângulo + matriz de furos) e o CAD 2D local (`cad2d.js`); escreve entidades `circle` em `CAD.entities` via `CAD2D.substituirOrigem()` (`aplicarDesenho`), marcadas com `desenho2D:{origem,fileira,furo}` — não cria mais operações em `SEQ` diretamente (ver `INSTRUCAO-CAD-CAM.md`, Etapa 2), acoplamento documentado no topo do próprio arquivo. Superfície exposta: `DESENHO2D = { render, aplicar, avisos, salvar, carregar, sincronizado }`. Depende de globais do `<script>` principal (`$`, `cfg()`, `toast()`, `fnum()`) e do `CAD2D`; é o último `<script>` de módulo carregado no HTML.
 

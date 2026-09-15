@@ -6,8 +6,10 @@
    carregados antes deste arquivo: $, num/fnum, avaliarExpr/interpretarEstrategia/ESTRATEGIAS
    (fichas.js), cfg(), DEFS/CUSTOM/CUSTOM_SEQ/registrarCustom/removerCustom (core), F_TROCA,
    SEQ, UID, SELECIONADO, toast(), refresh(), refreshDebounced(), refresh3DSelecao()
-   (preview3d.js), renderPaleta() (paleta.js), DESENHO2D/DESENHO_ID (desenho2d.js) e
-   `library` (elemento do shell, definido no <script> principal). */
+   (preview3d.js), renderPaleta() (paleta.js), DESENHO2D (desenho2d.js) e `library`
+   (elemento do shell, definido no <script> principal). Bloco com `geo` (Etapa 3,
+   INSTRUCAO-CAD-CAM.md): campos marcados `geo:true` em DEFS[tipo].params somem do
+   formulário (posição/diâmetro vêm das entidades do CAD 2D, não de digitação). */
 
 /* ============================================================
    UI — PILHA
@@ -71,6 +73,7 @@ function renderPilha(){
     SEQ.forEach((b,i)=>{
       const D=DEFS[b.tipo];
       const ctxB=ctxDoBloco(b.p);
+      const ancorado=Array.isArray(b.geo)&&b.geo.length>0;
       const est=ESTRATEGIAS[b.tipo];
       let confHTML="";
       if(est && Array.isArray(est.saidas)){
@@ -96,7 +99,7 @@ function renderPilha(){
           </div>
         </div>
         <div class="bbody">
-          <div class="grid3">${D.params.filter(f=>campoVisivel(f,ctxB)).map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>${confHTML}
+          <div class="grid3">${D.params.filter(f=>campoVisivel(f,ctxB)&&!(ancorado&&f.geo)).map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}</div>${confHTML}
           <div class="sub">Ferramenta deste bloco</div>
           <div class="grid3">
             ${F_TROCA.map(f=>campoHTML(f,b.p[f.k],b.uid)).join("")}
@@ -115,9 +118,9 @@ function renderPilha(){
   holder.querySelectorAll('.field').forEach((field,i)=>{const input=field.querySelector('input,select');const label=field.querySelector('label');if(input&&label){input.id='operation-field-'+i;label.htmlFor=input.id;}});
   const empty=$('pilha').querySelector('.vazio');if(empty)empty.textContent='Nenhuma operação. Use Adicionar operação para começar.';
   if(SEQ.length)library.open=false;
-  // ex-camada "desenho 2D": aviso de fileira vinculada no inspetor
+  // Etapa 3: aviso de operação ancorada em geometria do CAD 2D no inspetor
   const linked=SEQ.find(x=>x.uid===SELECIONADO);
-  if(linked?.desenho2D?.origem===DESENHO_ID){const info=document.createElement('div');info.className='linked-operation';info.textContent=`Fileira ${linked.desenho2D.fileira+1} vinculada ao desenho 2D. Alterações de posição aqui serão substituídas ao confirmar o desenho. Revise ferramenta e condições de corte.`;$('inspector-fields').prepend(info);}
+  if(Array.isArray(linked?.geo)&&linked.geo.length){const n=linked.geo.length;const info=document.createElement('div');info.className='linked-operation';info.textContent=`Ancorada a ${n} entidade${n>1?'s':''} do CAD 2D. Posição e diâmetro vêm do desenho — mova a geometria para atualizar o programa.`;$('inspector-fields').prepend(info);}
 }
 
 document.querySelector(".wrap").addEventListener("click",e=>{
@@ -132,7 +135,7 @@ document.querySelector(".wrap").addEventListener("click",e=>{
     if(a==="del"){ SEQ.splice(i,1); if(SELECIONADO===uid) SELECIONADO=null; }
     if(a==="up"   && i>0){ [SEQ[i-1],SEQ[i]]=[SEQ[i],SEQ[i-1]]; }
     if(a==="down" && i<SEQ.length-1){ [SEQ[i+1],SEQ[i]]=[SEQ[i],SEQ[i+1]]; }
-    if(a==="dup"){ const c=JSON.parse(JSON.stringify(SEQ[i])); c.uid=UID++; c.aberto=false; delete c.desenho2D; SEQ.splice(i+1,0,c); }
+    if(a==="dup"){ const c=JSON.parse(JSON.stringify(SEQ[i])); c.uid=UID++; c.aberto=false; SEQ.splice(i+1,0,c); }
     renderPilha(); refresh(); return;
   }
   if(head){

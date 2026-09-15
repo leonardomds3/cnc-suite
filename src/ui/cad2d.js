@@ -2,7 +2,13 @@
 /* CAD 2D local: entidades independentes do percurso CNC.
    Depende de $ (getElementById) e fnum (src/core/formato.js), definidos pelo HTML host.
    CAD2D.init() deve ser chamado no boot, depois que $ existir e o DOM da
-   aba de desenho estiver presente. */
+   aba de desenho estiver presente.
+   Acoplamento com o domínio de operações (Etapa 3, INSTRUCAO-CAD-CAM.md): o botão
+   "Criar furação" chama addBloco() (paleta.js) e showStage() (script principal do
+   HTML); cadCommit() chama refreshDebounced() (script principal) a cada mudança de
+   geometria, pois blocos com `geo` leem a entidade ao vivo — todos carregados depois
+   deste arquivo, mas já definidos quando o clique/commit acontece (o boot só chama
+   CAD2D.init() por último). */
 const CAD_NAMES={line:'Reta',rect:'Retângulo',circle:'Círculo',arc:'Arco'};
 const CAD_GROUP_ORDER=['line','rect','arc','circle'];
 const CAD_GROUP_LABELS={line:'Retas',rect:'Retângulos',arc:'Arcos',circle:'Furos'};
@@ -23,7 +29,12 @@ function cadApplyLinks(entities){
  entities.forEach(visit);return entities;
 }
 function cadCommit(mutator){
- try{const next=cadClone(CAD);mutator(next);if(next.entities.length>500)throw Error('Limite desta etapa: 500 entidades.');cadApplyLinks(next.entities);cadUndo.push(cadClone(CAD));if(cadUndo.length>100)cadUndo.shift();cadRedo=[];CAD=next;cadRender();return true;}
+ try{const next=cadClone(CAD);mutator(next);if(next.entities.length>500)throw Error('Limite desta etapa: 500 entidades.');cadApplyLinks(next.entities);cadUndo.push(cadClone(CAD));if(cadUndo.length>100)cadUndo.shift();cadRedo=[];CAD=next;cadRender();
+  /* Etapa 3: operações ancoradas (`geo`) leem a posição direto da entidade — sem
+     isto, mover/editar/excluir geometria deixaria o G-code desatualizado até
+     algo alheio ao CAD disparar refresh(). */
+  refreshDebounced();
+  return true;}
  catch(err){$('cad-message').textContent=err.message;return false;}
 }
 function cadNew(type,points){
@@ -126,6 +137,22 @@ function cadRender(){
  $('cad-message').textContent='';document.querySelectorAll('[data-cad-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cadTool===cadTool)));
  cadRenderGroups();
  $('cad-undo').disabled=!cadUndo.length;$('cad-redo').disabled=!cadRedo.length;$('cad-delete').disabled=cadSelected.size===0;cadRenderProperties();cadRenderCanvas();
+ cadRenderFuracaoBotao();
+}
+/* Etapa 3 (INSTRUCAO-CAD-CAM.md): "Criar furação" só habilita quando a seleção é
+   inteira de círculos (um ou mais) — o resto é feito por addBloco('furosL',{geo}). */
+function cadFuracaoSelecionados(){
+ const ids=[...cadSelected];
+ if(!ids.length) return null;
+ const entidades=ids.map(id=>CAD.entities.find(e=>e.id===id));
+ return entidades.every(e=>e&&e.type==='circle') ? ids : null;
+}
+function cadRenderFuracaoBotao(){
+ const btn=$('cad-criar-furacao'); if(!btn) return;
+ const ids=cadFuracaoSelecionados();
+ btn.disabled=!ids;
+ btn.textContent=ids?`+ Criar furação (${ids.length})`:'+ Criar furação';
+ btn.title=ids?'':'Selecione um ou mais círculos para criar a operação de furação.';
 }
 function cadDelete(){if(!cadSelected.size)return;const ids=new Set(cadSelected);cadCommit(next=>{next.entities=next.entities.filter(e=>!ids.has(e.id));next.entities.forEach(e=>{if(e.link!=null&&ids.has(e.link))delete e.link;});});}
 function cadSubstituirOrigem(origem,novas){
@@ -143,12 +170,17 @@ function cadInit(){
  const modes=document.createElement('div');modes.className='drawing-modes';modes.innerHTML='<button id="cad-mode" aria-pressed="true">Desenho livre</button><button id="matrix-mode" aria-pressed="false">Padrão de furos vinculado</button>';
  const matrix=document.createElement('div');matrix.id='matrix-mode-content';matrix.className='drawing-mode draft-grid';matrix.hidden=true;matrix.append(...drawingChildren);
  const free=document.createElement('div');free.id='cad-mode-content';free.className='drawing-mode cad-grid';
- free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button id="cad-trim" disabled title="Em construção">Aparar</button><button id="cad-cota" aria-pressed="true">Cota</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho. Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
+ free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><button id="cad-criar-furacao" class="btn primary" disabled>+ Criar furação</button><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button id="cad-trim" disabled title="Em construção">Aparar</button><button id="cad-cota" aria-pressed="true">Cota</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho. Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
  $('drawing').append(modes,free,matrix);
  function cadMode(isFree){free.hidden=!isFree;matrix.hidden=isFree;$('cad-mode').setAttribute('aria-pressed',String(isFree));$('matrix-mode').setAttribute('aria-pressed',String(!isFree));cadPoints=[];cadHover=null;cadRenderCanvas();}
  $('cad-mode').addEventListener('click',()=>cadMode(true));$('matrix-mode').addEventListener('click',()=>cadMode(false));
  document.querySelectorAll('[data-cad-tool]').forEach(b=>b.addEventListener('click',()=>{cadTool=b.dataset.cadTool;cadPoints=[];cadHover=null;cadRender();}));
  $('cad-delete').addEventListener('click',cadDelete);
+ $('cad-criar-furacao').addEventListener('click',()=>{
+  const ids=cadFuracaoSelecionados(); if(!ids) return;
+  addBloco('furosL',{geo:ids});
+  showStage('planning');
+ });
  $('cad-undo').addEventListener('click',()=>cadHistory(false));$('cad-redo').addEventListener('click',()=>cadHistory(true));
  $('cad-fit').addEventListener('click',cadFit);
  $('cad-cota').addEventListener('click',()=>{cadShowDim=!cadShowDim;$('cad-cota').setAttribute('aria-pressed',String(cadShowDim));cadRenderCanvas();});

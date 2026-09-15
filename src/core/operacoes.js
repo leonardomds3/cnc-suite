@@ -84,23 +84,38 @@ const DEFS = {
   /* ---------------- FURAÇÃO EM LINHA ---------------- */
   furosL:{
     nome:"Furos em linha", sub:"ciclo G83 / G81", cor:"var(--violet)", hex:0xb388ff,
+    /* geo:true = campo geométrico; some do formulário quando o bloco tem `geo`
+       (âncora no CAD 2D, ver programa.js/paramsEfetivos) — posição e diâmetro
+       passam a vir das entidades referenciadas, não destes campos digitados. */
     params:[
-      {k:"x0",l:"X do 1º furo",d:-60,s:1,u:"mm"},{k:"y0",l:"Y do 1º furo",d:-50,s:1,u:"mm"},
-      {k:"ix",l:"Incremento X",d:30,s:1,u:"mm"},{k:"iy",l:"Incremento Y",d:0,s:1,u:"mm"},
-      {k:"n",l:"Qtd de furos",d:5,s:1},
-      {k:"dia",l:"Ø da broca",d:8,s:0.5,u:"mm"},
+      {k:"x0",l:"X do 1º furo",d:-60,s:1,u:"mm",geo:true},{k:"y0",l:"Y do 1º furo",d:-50,s:1,u:"mm",geo:true},
+      {k:"ix",l:"Incremento X",d:30,s:1,u:"mm",geo:true},{k:"iy",l:"Incremento Y",d:0,s:1,u:"mm",geo:true},
+      {k:"n",l:"Qtd de furos",d:5,s:1,geo:true},
+      {k:"dia",l:"Ø da broca",d:8,s:0.5,u:"mm",geo:true},
       {k:"prof",l:"Profundidade",d:20,s:0.5,u:"mm"},
       {k:"q",l:"Peck Q (0 = G81)",d:5,s:0.5,u:"mm"},
       {k:"f",l:"Avanço F",d:120,s:10,u:"mm/min"},
     ],
     warn(p,c,d){ const w=[];
-      if(p.n<1) w.push("Quantidade de furos deve ser 1 ou mais.");
+      if(p.furos){ if(p.furos.length<1) w.push("Selecione ao menos um furo no CAD 2D."); }
+      else if(p.n<1) w.push("Quantidade de furos deve ser 1 ou mais.");
       if(p.prof>c.bz) w.push("Furo mais profundo que a altura do bloco (furo passante).");
       return w; },
     gerar(p,c,nb,d){
       const ciclo = p.q>0 ? `G83` : `G81`;
       const qtxt  = p.q>0 ? `Q${fx(p.q)}` : ``;
       const L=[];
+      /* p.furos: injetado por paramsEfetivos() (programa.js) quando o bloco tem
+         `geo` — posições literais das entidades, sem laço de macro (o passo
+         entre furos pode não ser uniforme, ao contrário do padrão x0/ix). */
+      if(p.furos){
+        p.furos.forEach((furo,i)=>{
+          if(i===0) L.push(`G98${ciclo}X${fx(furo.x)}Y${fx(furo.y)}Z-${fx(p.prof)}R2.${qtxt}F${fnum(p.f)}`);
+          else L.push(`X${fx(furo.x)}Y${fx(furo.y)}`);
+        });
+        L.push(`G80`);
+        return L;
+      }
       L.push(`#25=${fnum(Math.max(1,Math.round(p.n)))}(QTD DE FUROS)`);
       L.push(`#15=0(CONTADOR)`);
       L.push(`N${nb+10}#30=${fnum(p.x0)}+[#15*[${fnum(p.ix)}]](X DO FURO)`);
@@ -114,6 +129,14 @@ const DEFS = {
     },
     volume(p){
       const grp=new THREE.Group();
+      if(p.furos){
+        p.furos.forEach(furo=>{
+          const m=new THREE.Mesh(new THREE.CylinderGeometry(furo.dia/2,furo.dia/2,p.prof,24));
+          m.position.set(furo.x, -p.prof/2, -furo.y);
+          grp.add(m);
+        });
+        return grp;
+      }
       const n=Math.max(1,Math.round(p.n));
       for(let i=0;i<n;i++){
         const m=new THREE.Mesh(new THREE.CylinderGeometry(p.dia/2,p.dia/2,p.prof,24));

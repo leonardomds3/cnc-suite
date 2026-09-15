@@ -417,6 +417,7 @@ input:focus,select:focus{border-color:#18b8e6;box-shadow:0 0 0 3px #18b8e622}.ch
 <script src="src/core/operacoes.js"></script>
 <script src="src/core/macros.js"></script>
 <script src="src/core/fichas.js"></script>
+<script src="src/core/features.js"></script>
 <script src="src/core/programa.js"></script>
 <script src="src/core/corte.js"></script>
 <script src="dados/estrategias.js"></script>
@@ -557,7 +558,7 @@ function renderProgramParams(){
  const body=$('program-params');body.replaceChildren();
  const row=(values,group=false)=>{const tr=document.createElement('tr');if(group)tr.className='group';values.forEach(value=>{const td=document.createElement('td');td.textContent=value;if(group)td.colSpan=3;tr.append(td);});body.append(tr);};
  if(!SEQ.length)row(['Nenhuma operação adicionada.','','']);
- SEQ.forEach((b,i)=>{row([`${i+1} · ${DEFS[b.tipo].nome}`],true);[...DEFS[b.tipo].params,...F_TROCA].filter(f=>campoVisivel(f,ctxDoBloco(b.p))).forEach(f=>{const value=f.sel?f.sel.find(o=>String(o.v)===String(b.p[f.k]))?.t:b.p[f.k];row([f.l,f.chk?(value?'Sim':'Não'):String(value??''),f.u||'']);});});
+ SEQ.forEach((b,i)=>{const ancorado=Array.isArray(b.geo)&&b.geo.length>0;row([`${i+1} · ${DEFS[b.tipo].nome}`],true);[...DEFS[b.tipo].params,...F_TROCA].filter(f=>campoVisivel(f,ctxDoBloco(b.p))&&!(ancorado&&f.geo)).forEach(f=>{const value=f.sel?f.sel.find(o=>String(o.v)===String(b.p[f.k]))?.t:b.p[f.k];row([f.l,f.chk?(value?'Sim':'Não'):String(value??''),f.u||'']);});});
 }
 $('legenda').addEventListener('click',()=>renderPilha());
 showStage('planning');

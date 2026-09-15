@@ -43,6 +43,7 @@ carregar("src/core/simulador.js");
 carregar("src/core/operacoes.js");
 carregar("src/core/macros.js");
 carregar("src/core/fichas.js");
+carregar("src/core/features.js");
 carregar("src/core/programa.js");
 carregar("src/core/corte.js");
 carregar("dados/estrategias.js");

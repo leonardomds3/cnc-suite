@@ -27,13 +27,17 @@ function renderPaleta(){
 }
 renderPaleta();
 
-function addBloco(tipo){
+function addBloco(tipo, extra){
   const D=DEFS[tipo];
   const p={};
   D.params.forEach(f=>p[f.k]=f.d);
   F_TROCA.forEach(f=>p[f.k]=f.d);
   SEQ.forEach(b=>b.aberto=false);
-  SEQ.push({uid:UID++, tipo, aberto:true, p});
+  const bloco={uid:UID++, tipo, aberto:true, p};
+  /* Etapa 3 (INSTRUCAO-CAD-CAM.md): geo = ids de entidades do CAD 2D que
+     ancoram a operação — usado pelo botão "Criar furação" (cad2d.js). */
+  if(extra?.geo?.length) bloco.geo=extra.geo;
+  SEQ.push(bloco);
   SELECIONADO=SEQ[SEQ.length-1].uid;
   renderPilha(); refresh();
   toast(D.nome+" adicionado");

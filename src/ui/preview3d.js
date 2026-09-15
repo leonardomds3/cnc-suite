@@ -4,8 +4,9 @@
    Mapeamento CNC → cena: three(x, z, -y) · Z0 = topo do bloco.
    Depende de globais definidos no <script> principal de montador_macro_cnc_2.html,
    carregados antes deste arquivo: $, clamp, cfg() (core), DEFS, SEQ, UID, SELECIONADO,
-   IMPORTS/CORES_IMP (core), execNC() (core), toast(), renderLegenda() (refresh geral, no
-   HTML). THREE é opcional (TEM3D cai pra false sem ele; a geração de código continua). */
+   paramsEfetivos() (programa.js), IMPORTS/CORES_IMP (core), execNC() (core), toast(),
+   renderLegenda() (refresh geral, no HTML). THREE é opcional (TEM3D cai pra false sem
+   ele; a geração de código continua). */
 
 /* ============================================================
    PREVIEW 3D (Three.js)
@@ -178,7 +179,7 @@ function refresh3D(){
     const D=DEFS[b.tipo];
     const dLocal = b.p.td;
     let obj;
-    try{ obj=D.volume(b.p,c,dLocal); }catch(e){ return; }
+    try{ obj=D.volume(paramsEfetivos(b),c,dLocal); }catch(e){ return; }
     if(!obj) return;
     const mat=new THREE.MeshLambertMaterial({color:D.hex,transparent:true,opacity:0.8});
     obj.traverse(o=>{ if(o.isMesh) o.material=mat; });
