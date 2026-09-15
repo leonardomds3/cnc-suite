@@ -28,7 +28,14 @@
    `line` de uma vez (cadAddRect), marcadas com `rectGrupo` compartilhado, para
    dar para selecionar/cotar/apagar cada lado sozinho. `.json` salvo antes desta
    etapa ainda guarda `rect`; cadCarregar converte via cadExpandirRects antes de
-   validar. */
+   validar.
+   Etapa 7 (Aparar): escopo é reta contra reta e reta contra arco/círculo — só a
+   reta é a entidade aparada (arco aparado e arco-contra-arco ficam para depois,
+   ver INSTRUCAO-CAD-CAM.md). cadLineIntersections resolve os cruzamentos como
+   parâmetro t ao longo da reta clicada (0=início, 1=fim); cadTrimLine acha o
+   trecho entre os dois cruzamentos mais próximos do clique e remove só ele —
+   sobra uma reta encurtada (cruzamento numa ponta) ou duas retas novas
+   (cruzamento no meio, a segunda ganha id e cota novos). */
 const CAD_NAMES={line:'Reta',circle:'Círculo',arc:'Arco',dim:'Cota'};
 const CAD_GROUP_ORDER=['line','arc','circle','dim'];
 const CAD_GROUP_LABELS={line:'Retas',arc:'Arcos',circle:'Furos',dim:'Cotas'};
@@ -232,7 +239,7 @@ function cadRenderCanvas(){
   body+=`<g class="cad-entry-box" transform="translate(${ox},${oy})"><rect x="0" y="${-font*1.3}" width="${font*7}" height="${font*2.6}" rx="${font*.3}"/><text class="${cadEntry.field==='length'?'active':''}" x="${font*.3}" y="${-font*.55}" font-size="${font}">L ${lenTxt}</text><text class="${cadEntry.field==='angle'?'active':''}" x="${font*.3}" y="${font*.85}" font-size="${font}">∠ ${angTxt}°</text></g>`;
  }
  svg.innerHTML=body;
- const names={select:'Selecione uma entidade para editar suas coordenadas.',move:'Arraste uma entidade (ou sua cota) para mover.',pan:'Arraste para deslocar a vista.',line:cadPoints.length?'Clique o ponto final ou digite a medida.':'Clique o ponto inicial.',rect:cadPoints.length?'Clique o canto oposto ou digite a medida.':'Clique o primeiro canto.',circle:cadPoints.length?'Clique para definir o raio ou digite a medida.':'Clique o centro.',arc:cadPoints.length===2?'Clique a direção final do arco anti-horário ou digite o ângulo.':cadPoints.length?'Clique o início do arco ou digite a medida.':'Clique o centro do arco.'};
+ const names={select:'Selecione uma entidade para editar suas coordenadas.',move:'Arraste uma entidade (ou sua cota) para mover.',trim:'Clique no trecho da reta que quer remover (contra reta, arco ou círculo).',pan:'Arraste para deslocar a vista.',line:cadPoints.length?'Clique o ponto final ou digite a medida.':'Clique o ponto inicial.',rect:cadPoints.length?'Clique o canto oposto ou digite a medida.':'Clique o primeiro canto.',circle:cadPoints.length?'Clique para definir o raio ou digite a medida.':'Clique o centro.',arc:cadPoints.length===2?'Clique a direção final do arco anti-horário ou digite o ângulo.':cadPoints.length?'Clique o início do arco ou digite a medida.':'Clique o centro do arco.'};
  $('cad-help').textContent=names[cadTool]+(cadHover?`  X ${fnum(cadHover.x)} · Y ${fnum(cadHover.y)} mm`:'')+(cadEntry?'  ·  Tab: comprimento/ângulo · Enter confirma · Esc cancela o valor':'');
 }
 function cadRenderProperties(){
@@ -327,6 +334,68 @@ function cadSubstituirOrigem(origem,novas){
   novas.forEach(e=>next.entities.push({...e,id:next.next++}));
  });
 }
+function cadAngleInArc(angle,arc){
+ const delta=((arc.a1-arc.a0)%360+360)%360,rel=((angle-arc.a0)%360+360)%360;
+ return rel<=delta+1e-6;
+}
+function cadLineLineT(l1,l2){
+ const dx1=l1.x2-l1.x,dy1=l1.y2-l1.y,dx2=l2.x2-l2.x,dy2=l2.y2-l2.y;
+ const rxs=dx1*dy2-dy1*dx2;
+ if(Math.abs(rxs)<1e-12)return null;
+ const t=((l2.x-l1.x)*dy2-(l2.y-l1.y)*dx2)/rxs,u=((l2.x-l1.x)*dy1-(l2.y-l1.y)*dx1)/rxs;
+ return (t>=0&&t<=1&&u>=0&&u<=1)?t:null;
+}
+function cadLineCircleTs(line,circle){
+ const dx=line.x2-line.x,dy=line.y2-line.y,fx=line.x-circle.x,fy=line.y-circle.y;
+ const a=dx*dx+dy*dy,b=2*(fx*dx+fy*dy),c=fx*fx+fy*fy-circle.r*circle.r,disc=b*b-4*a*c;
+ if(disc<0||a<1e-12)return [];
+ const sq=Math.sqrt(disc);
+ return [(-b-sq)/(2*a),(-b+sq)/(2*a)].filter(t=>t>=0&&t<=1);
+}
+function cadLineArcTs(line,arc){
+ return cadLineCircleTs(line,arc).filter(t=>{
+  const px=line.x+(line.x2-line.x)*t,py=line.y+(line.y2-line.y)*t;
+  return cadAngleInArc(cadAngle({x:arc.x,y:arc.y},{x:px,y:py}),arc);
+ });
+}
+function cadLineIntersections(line){
+ const ts=[];
+ CAD.entities.forEach(o=>{
+  if(o.id===line.id||o.type==='dim')return;
+  if(o.type==='line'){const t=cadLineLineT(line,o);if(t!=null)ts.push(t);}
+  else if(o.type==='circle')cadLineCircleTs(line,o).forEach(t=>ts.push(t));
+  else if(o.type==='arc')cadLineArcTs(line,o).forEach(t=>ts.push(t));
+ });
+ return [...new Set(ts.map(cadRound))].filter(t=>t>1e-6&&t<1-1e-6).sort((a,b)=>a-b);
+}
+function cadTrimLine(line,click){
+ const ts=cadLineIntersections(line);
+ if(!ts.length){$('cad-message').textContent='Nenhum cruzamento encontrado nesta reta.';return false;}
+ const dx=line.x2-line.x,dy=line.y2-line.y,len2=dx*dx+dy*dy;
+ const tClick=Math.min(1,Math.max(0,((click.x-line.x)*dx+(click.y-line.y)*dy)/len2));
+ const bounds=[0,...ts,1];
+ let idx=0;
+ for(let i=0;i<bounds.length-1;i++)if(tClick>=bounds[i]&&tClick<=bounds[i+1]){idx=i;break;}
+ const at=t=>({x:cadRound(line.x+dx*t),y:cadRound(line.y+dy*t)});
+ const pieces=[];
+ if(idx>0)pieces.push([0,bounds[idx]]);
+ if(idx<bounds.length-2)pieces.push([bounds[idx+1],1]);
+ const segs=pieces.map(([a,b])=>({a:at(a),b:at(b)})).filter(s=>Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y)>1e-6);
+ if(!segs.length){$('cad-message').textContent='Aparar removeria a reta inteira; use Excluir.';return false;}
+ return cadCommit(next=>{
+  const i=next.entities.findIndex(e=>e.id===line.id);
+  next.entities[i]={...next.entities[i],x:segs[0].a.x,y:segs[0].a.y,x2:segs[0].b.x,y2:segs[0].b.y};
+  cadSelected=new Set([line.id]);
+  if(segs.length>1){
+   const seg=segs[1],id=next.next++;
+   const nova={type:'line',x:seg.a.x,y:seg.a.y,x2:seg.b.x,y2:seg.b.y,id};
+   if(line.rectGrupo!=null)nova.rectGrupo=line.rectGrupo;
+   next.entities.push(nova);
+   next.entities.push({...cadNewDim(nova),id:next.next++});
+   cadSelected.add(id);
+  }
+ });
+}
 function cadHistory(redo){const from=redo?cadRedo:cadUndo,to=redo?cadUndo:cadRedo;if(!from.length)return;to.push(cadClone(CAD));CAD=from.pop();cadPoints=[];cadHover=null;cadEntry=null;cadRender();}
 function cadFit(){const pts=CAD.entities.flatMap(e=>e.type==='circle'||e.type==='arc'?[{x:e.x-e.r,y:e.y-e.r},{x:e.x+e.r,y:e.y+e.r}]:cadEndpoints(e));if(!pts.length)cadView={x:-120,y:-90,w:240,h:180};else{const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),pad=Math.max(maxX-minX,maxY-minY,10)*.2;cadView={x:minX-pad,y:-maxY-pad,w:Math.max(maxX-minX,1)+2*pad,h:Math.max(maxY-minY,1)+2*pad};}cadRenderCanvas();}
 function cadPoint(event){const svg=$('cad-svg'),point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;const local=point.matrixTransform(svg.getScreenCTM().inverse());return {x:local.x,y:-local.y};}
@@ -336,7 +405,7 @@ function cadInit(){
  const modes=document.createElement('div');modes.className='drawing-modes';modes.innerHTML='<button id="cad-mode" aria-pressed="true">Desenho livre</button><button id="matrix-mode" aria-pressed="false">Padrão de furos vinculado</button>';
  const matrix=document.createElement('div');matrix.id='matrix-mode-content';matrix.className='drawing-mode draft-grid';matrix.hidden=true;matrix.append(...drawingChildren);
  const free=document.createElement('div');free.id='cad-mode-content';free.className='drawing-mode cad-grid';
- free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><button id="cad-criar-furacao" class="btn primary" disabled>+ Criar furação</button><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button id="cad-trim" disabled title="Em construção">Aparar</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho ou digite a medida (comprimento/ângulo, Tab alterna, Enter confirma). Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input id="cad-showdim" type="checkbox" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
+ free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><button id="cad-criar-furacao" class="btn primary" disabled>+ Criar furação</button><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button data-cad-tool="trim" title="Clique no trecho da reta que quer remover.">Aparar</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho ou digite a medida (comprimento/ângulo, Tab alterna, Enter confirma). Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input id="cad-showdim" type="checkbox" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
  $('drawing').append(modes,free,matrix);
  function cadMode(isFree){free.hidden=!isFree;matrix.hidden=isFree;$('cad-mode').setAttribute('aria-pressed',String(isFree));$('matrix-mode').setAttribute('aria-pressed',String(!isFree));cadPoints=[];cadHover=null;cadEntry=null;cadRenderCanvas();}
  $('cad-mode').addEventListener('click',()=>cadMode(true));$('matrix-mode').addEventListener('click',()=>cadMode(false));
@@ -368,6 +437,12 @@ function cadInit(){
    cadSelected=entity?new Set([id]):new Set();
    if(entity){cadDrag={kind:'move',id,start:raw,original:cadClone(entity),preview:cadClone(entity)};cadSvg.setPointerCapture(event.pointerId);}
    cadRender();return;
+  }
+  if(cadTool==='trim'){
+   if(!entity)return;
+   if(entity.type!=='line'){$('cad-message').textContent='Nesta etapa, só é possível aparar retas (contra retas, arcos ou círculos).';return;}
+   cadTrimLine(entity,raw);
+   return;
   }
   cadPlacePoint(p);
  });
