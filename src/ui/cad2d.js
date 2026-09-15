@@ -4,8 +4,10 @@
    CAD2D.init() deve ser chamado no boot, depois que $ existir e o DOM da
    aba de desenho estiver presente. */
 const CAD_NAMES={line:'Reta',rect:'Retângulo',circle:'Círculo',arc:'Arco'};
+const CAD_GROUP_ORDER=['line','rect','arc','circle'];
+const CAD_GROUP_LABELS={line:'Retas',rect:'Retângulos',arc:'Arcos',circle:'Furos'};
 const CAD_FIELDS={line:[['x','X inicial'],['y','Y inicial'],['x2','X final'],['y2','Y final']],rect:[['x','X inferior esquerdo'],['y','Y inferior esquerdo'],['w','Comprimento'],['h','Altura']],circle:[['x','Centro X'],['y','Centro Y'],['r','Raio']],arc:[['x','Centro X'],['y','Centro Y'],['r','Raio'],['a0','Ângulo inicial (°)'],['a1','Ângulo final (°)']]};
-let CAD={version:1,next:1,entities:[]},cadSelected=null,cadTool='select',cadPoints=[],cadHover=null,cadDrag=null;
+let CAD={version:1,next:1,entities:[]},cadSelected=new Set(),cadTool='select',cadPoints=[],cadHover=null,cadDrag=null,cadShowDim=true;
 let cadView={x:-120,y:-90,w:240,h:180},cadUndo=[],cadRedo=[];
 const cadClone=x=>JSON.parse(JSON.stringify(x));
 const cadAngle=(c,p)=>(Math.atan2(p.y-c.y,p.x-c.x)*180/Math.PI+360)%360;
@@ -32,7 +34,7 @@ function cadNew(type,points){
  if(type==='arc')Object.assign(e,{a0:cadAngle(a,b),a1:cadAngle(a,points[2])});
  return e;
 }
-function cadAdd(e){return cadCommit(next=>{const id=next.next++;next.entities.push({...e,id});cadSelected=id;});}
+function cadAdd(e){return cadCommit(next=>{const id=next.next++;next.entities.push({...e,id});cadSelected=new Set([id]);});}
 function cadEndpoints(e){
  if(e.type==='line')return [{x:e.x,y:e.y},{x:e.x2,y:e.y2}];
  if(e.type==='rect')return [{x:e.x,y:e.y},{x:e.x+e.w,y:e.y},{x:e.x+e.w,y:e.y+e.h},{x:e.x,y:e.y+e.h}];
@@ -62,8 +64,8 @@ function cadRenderCanvas(){
  let body=`<defs><pattern id="cad-grid-pattern" width="${grid}" height="${grid}" patternUnits="userSpaceOnUse"><path d="M${grid} 0H0V${grid}" fill="none" stroke="#1c3a4d" stroke-width=".5" vector-effect="non-scaling-stroke"/></pattern></defs><rect x="${cadView.x}" y="${cadView.y}" width="${cadView.w}" height="${cadView.h}" fill="url(#cad-grid-pattern)"/><path d="M${cadView.x} 0H${cadView.x+cadView.w} M0 ${cadView.y}V${cadView.y+cadView.h}" stroke="#255e74" fill="none" vector-effect="non-scaling-stroke" stroke-width="1"/>`;
  CAD.entities.forEach(source=>{
   const e=cadDrag?.kind==='move'&&source.id===cadDrag.id?cadDrag.preview:source;
-  body+=cadShape(e,'cad-hit',true)+cadShape(e,'cad-shape'+(e.id===cadSelected?' selected':''),true);
-  if($('cad-dimensions').checked){const label=e.type==='line'?'L '+fnum(cadSize(e)):e.type==='rect'?fnum(e.w)+' × '+fnum(e.h):'R '+fnum(e.r);body+=`<text class="cad-dimension" x="${e.x}" y="${-e.y-font}" font-size="${font}">${label}${e.link!=null?' ↔ #'+e.link:''}</text>`;}
+  body+=cadShape(e,'cad-hit',true)+cadShape(e,'cad-shape'+(cadSelected.has(e.id)?' selected':''),true);
+  if(cadShowDim){const label=e.type==='line'?'L '+fnum(cadSize(e)):e.type==='rect'?fnum(e.w)+' × '+fnum(e.h):'R '+fnum(e.r);body+=`<text class="cad-dimension" x="${e.x}" y="${-e.y-font}" font-size="${font}">${label}${e.link!=null?' ↔ #'+e.link:''}</text>`;}
  });
  if(cadPoints.length&&cadHover){try{let e;if(cadTool==='arc'&&cadPoints.length===1)e=cadNew('circle',[cadPoints[0],cadHover]);else e=cadNew(cadTool,[...cadPoints,cadHover]);if(cadValid(e))body+=cadShape(e,'cad-preview');}catch(_){}}
  if(cadHover)body+=`<circle cx="${cadHover.x}" cy="${-cadHover.y}" r="${font*.25}" fill="#42d9ef" pointer-events="none"/>`;
@@ -72,7 +74,11 @@ function cadRenderCanvas(){
  $('cad-help').textContent=names[cadTool]+(cadHover?`  X ${fnum(cadHover.x)} · Y ${fnum(cadHover.y)} mm`:'');
 }
 function cadRenderProperties(){
- const e=CAD.entities.find(x=>x.id===cadSelected);const el=$('cad-properties');el.replaceChildren();
+ const el=$('cad-properties');el.replaceChildren();
+ const ids=[...cadSelected];
+ if(ids.length===0){el.textContent='Selecione uma entidade ou escolha uma ferramenta para criar.';return;}
+ if(ids.length>1){cadRenderPropertiesMulti(ids,el);return;}
+ const e=CAD.entities.find(x=>x.id===ids[0]);
  if(!e){el.textContent='Selecione uma entidade ou escolha uma ferramenta para criar.';return;}
  const title=document.createElement('p');title.textContent=CAD_NAMES[e.type]+' #'+e.id;el.append(title);
  CAD_FIELDS[e.type].forEach(([key,label])=>{const row=document.createElement('div');row.className='draft-field';const lab=document.createElement('label');lab.htmlFor='cad-prop-'+key;lab.textContent=label;const input=document.createElement('input');input.type='number';input.step='any';input.id=lab.htmlFor;input.dataset.cadKey=key;input.value=e[key];row.append(lab,input);el.append(row);});
@@ -86,14 +92,42 @@ function cadRenderProperties(){
   cadCommit(next=>{next.entities[next.entities.findIndex(x=>x.id===e.id)]=updated;});
  });el.append(apply);
 }
-function cadRender(){
- if(!CAD.entities.some(e=>e.id===cadSelected))cadSelected=null;
- $('cad-message').textContent='';document.querySelectorAll('[data-cad-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cadTool===cadTool)));
- const list=$('cad-list');list.replaceChildren();if(!CAD.entities.length)list.textContent='Desenho vazio.';
- CAD.entities.forEach(e=>{const b=document.createElement('button');b.textContent=CAD_NAMES[e.type]+' #'+e.id;b.setAttribute('aria-pressed',String(e.id===cadSelected));b.addEventListener('click',()=>{cadSelected=e.id;cadRender();});list.append(b);});
- $('cad-undo').disabled=!cadUndo.length;$('cad-redo').disabled=!cadRedo.length;$('cad-delete').disabled=cadSelected===null;cadRenderProperties();cadRenderCanvas();
+function cadRenderPropertiesMulti(ids,el){
+ const entities=CAD.entities.filter(e=>ids.includes(e.id));
+ const sameType=entities.every(e=>e.type===entities[0].type);
+ const title=document.createElement('p');title.textContent=entities.length+' selecionados'+(sameType?' · '+CAD_NAMES[entities[0].type]:'');el.append(title);
+ if(!sameType){const hint=document.createElement('p');hint.className='hint';hint.textContent='Selecione entidades do mesmo tipo para editar campos em comum.';el.append(hint);return;}
+ CAD_FIELDS[entities[0].type].forEach(([key,label])=>{const row=document.createElement('div');row.className='draft-field';const lab=document.createElement('label');lab.textContent=label;const input=document.createElement('input');input.type='number';input.step='any';input.placeholder='Vários valores';input.dataset.cadKey=key;row.append(lab,input);el.append(row);});
+ const hint=document.createElement('p');hint.className='hint';hint.textContent='Preencha só os campos que quer alterar em todos os selecionados; os demais mantêm o valor de cada entidade.';el.append(hint);
+ const apply=document.createElement('button');apply.className='btn primary';apply.textContent='Aplicar a todos';apply.addEventListener('click',()=>{
+  const changes={};for(const inp of el.querySelectorAll('[data-cad-key]'))if(inp.value!=='')changes[inp.dataset.cadKey]=Number(inp.value);
+  if(!Object.keys(changes).length){$('cad-message').textContent='Preencha ao menos um campo para aplicar.';return;}
+  cadCommit(next=>{next.entities.forEach(e=>{if(ids.includes(e.id))Object.assign(e,changes);});});
+ });el.append(apply);
 }
-function cadDelete(){if(cadSelected===null)return;const id=cadSelected;cadCommit(next=>{next.entities=next.entities.filter(e=>e.id!==id);next.entities.forEach(e=>{if(e.link===id)delete e.link;});});}
+function cadRenderGroups(){
+ const list=$('cad-groups');list.replaceChildren();
+ if(!CAD.entities.length){list.textContent='Desenho vazio.';return;}
+ CAD_GROUP_ORDER.forEach(type=>{
+  const ids=CAD.entities.filter(e=>e.type===type).map(e=>e.id);
+  if(!ids.length)return;
+  const b=document.createElement('button');b.textContent=`${CAD_GROUP_LABELS[type]} (${ids.length})`;
+  b.setAttribute('aria-pressed',String(ids.every(id=>cadSelected.has(id))));
+  b.addEventListener('click',event=>{
+   if(event.shiftKey){cadSelected=new Set(cadSelected);ids.forEach(id=>cadSelected.add(id));}
+   else cadSelected=new Set(ids);
+   cadRender();
+  });
+  list.append(b);
+ });
+}
+function cadRender(){
+ cadSelected=new Set([...cadSelected].filter(id=>CAD.entities.some(e=>e.id===id)));
+ $('cad-message').textContent='';document.querySelectorAll('[data-cad-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cadTool===cadTool)));
+ cadRenderGroups();
+ $('cad-undo').disabled=!cadUndo.length;$('cad-redo').disabled=!cadRedo.length;$('cad-delete').disabled=cadSelected.size===0;cadRenderProperties();cadRenderCanvas();
+}
+function cadDelete(){if(!cadSelected.size)return;const ids=new Set(cadSelected);cadCommit(next=>{next.entities=next.entities.filter(e=>!ids.has(e.id));next.entities.forEach(e=>{if(e.link!=null&&ids.has(e.link))delete e.link;});});}
 function cadHistory(redo){const from=redo?cadRedo:cadUndo,to=redo?cadUndo:cadRedo;if(!from.length)return;to.push(cadClone(CAD));CAD=from.pop();cadPoints=[];cadHover=null;cadRender();}
 function cadFit(){const pts=CAD.entities.flatMap(e=>e.type==='circle'||e.type==='arc'?[{x:e.x-e.r,y:e.y-e.r},{x:e.x+e.r,y:e.y+e.r}]:cadEndpoints(e));if(!pts.length)cadView={x:-120,y:-90,w:240,h:180};else{const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),pad=Math.max(maxX-minX,maxY-minY,10)*.2;cadView={x:minX-pad,y:-maxY-pad,w:Math.max(maxX-minX,1)+2*pad,h:Math.max(maxY-minY,1)+2*pad};}cadRenderCanvas();}
 function cadPoint(event){const svg=$('cad-svg'),point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;const local=point.matrixTransform(svg.getScreenCTM().inverse());return {x:local.x,y:-local.y};}
@@ -103,7 +137,7 @@ function cadInit(){
  const modes=document.createElement('div');modes.className='drawing-modes';modes.innerHTML='<button id="cad-mode" aria-pressed="true">Desenho livre</button><button id="matrix-mode" aria-pressed="false">Padrão de furos vinculado</button>';
  const matrix=document.createElement('div');matrix.id='matrix-mode-content';matrix.className='drawing-mode draft-grid';matrix.hidden=true;matrix.append(...drawingChildren);
  const free=document.createElement('div');free.id='cad-mode-content';free.className='drawing-mode cad-grid';
- free.innerHTML=`<aside class="cad-side"><h2>Desenhar</h2><div class="cad-tools">${[['select','Selecionar'],['move','Mover'],['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button><button class="cad-action" id="cad-delete">Excluir</button></div><p class="hint">Clique os pontos na área de desenho. Esc cancela. Arcos: centro, início e direção final, em sentido anti-horário.</p><h2>Entidades</h2><div id="cad-list" class="cad-list"></div></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input type="checkbox" id="cad-dimensions" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Coordenadas</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div><div class="notice">Geometria livre salva com o projeto. Ainda não gera percurso CNC. Para gerar furação, use Padrão de furos vinculado.</div></aside>`;
+ free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button id="cad-trim" disabled title="Em construção">Aparar</button><button id="cad-cota" aria-pressed="true">Cota</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho. Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div><div class="notice">Geometria livre salva com o projeto. Ainda não gera percurso CNC. Para gerar furação, use Padrão de furos vinculado.</div></aside>`;
  $('drawing').append(modes,free,matrix);
  function cadMode(isFree){free.hidden=!isFree;matrix.hidden=isFree;$('cad-mode').setAttribute('aria-pressed',String(isFree));$('matrix-mode').setAttribute('aria-pressed',String(!isFree));cadPoints=[];cadHover=null;cadRenderCanvas();}
  $('cad-mode').addEventListener('click',()=>cadMode(true));$('matrix-mode').addEventListener('click',()=>cadMode(false));
@@ -111,13 +145,24 @@ function cadInit(){
  $('cad-delete').addEventListener('click',cadDelete);
  $('cad-undo').addEventListener('click',()=>cadHistory(false));$('cad-redo').addEventListener('click',()=>cadHistory(true));
  $('cad-fit').addEventListener('click',cadFit);
- ['cad-grid-step','cad-dimensions','cad-snap','cad-grid-snap'].forEach(id=>$(id).addEventListener('change',cadRenderCanvas));
+ $('cad-cota').addEventListener('click',()=>{cadShowDim=!cadShowDim;$('cad-cota').setAttribute('aria-pressed',String(cadShowDim));cadRenderCanvas();});
+ ['cad-grid-step','cad-snap','cad-grid-snap'].forEach(id=>$(id).addEventListener('change',cadRenderCanvas));
  const cadSvg=$('cad-svg');
  cadSvg.addEventListener('pointerdown',event=>{
   if(event.button!==0&&event.button!==1)return;event.preventDefault();cadSvg.focus();
   const raw=cadPoint(event),p=cadSnap(raw),id=Number(event.target.dataset.cadId),entity=CAD.entities.find(e=>e.id===id);
   if(cadTool==='pan'||event.button===1){cadDrag={kind:'pan',clientX:event.clientX,clientY:event.clientY,view:{...cadView},scale:1/cadSvg.getScreenCTM().a};cadSvg.setPointerCapture(event.pointerId);return;}
-  if(cadTool==='select'||cadTool==='move'){cadSelected=entity?entity.id:null;if(entity&&cadTool==='move'){cadDrag={kind:'move',id,start:raw,original:cadClone(entity),preview:cadClone(entity)};cadSvg.setPointerCapture(event.pointerId);}cadRender();return;}
+  if(cadTool==='select'){
+   if(!entity)cadSelected=new Set();
+   else if(event.shiftKey){cadSelected=new Set(cadSelected);cadSelected.add(id);}
+   else cadSelected=new Set([id]);
+   cadRender();return;
+  }
+  if(cadTool==='move'){
+   cadSelected=entity?new Set([id]):new Set();
+   if(entity){cadDrag={kind:'move',id,start:raw,original:cadClone(entity),preview:cadClone(entity)};cadSvg.setPointerCapture(event.pointerId);}
+   cadRender();return;
+  }
   cadPoints.push(p);const need=cadTool==='arc'?3:2;
   if(cadPoints.length===need){cadAdd(cadNew(cadTool,cadPoints));cadPoints=[];cadHover=null;}cadRenderCanvas();
  });
@@ -135,7 +180,7 @@ function cadInit(){
 }
 function cadSalvar(){return cadClone(CAD);}
 function cadCarregar(data){
- CAD={version:1,next:1,entities:[]};cadUndo=[];cadRedo=[];cadSelected=null;cadPoints=[];cadDrag=null;cadHover=null;
+ CAD={version:1,next:1,entities:[]};cadUndo=[];cadRedo=[];cadSelected=new Set();cadPoints=[];cadDrag=null;cadHover=null;
  if(data){
   if(data.version!==1||!Array.isArray(data.entities)||data.entities.length>500)throw Error('Formato de desenho livre inválido.');
   const ids=new Set();
