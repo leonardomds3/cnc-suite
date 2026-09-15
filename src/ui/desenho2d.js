@@ -1,13 +1,16 @@
-/* desenho2d.js — vínculo entre o desenho guiado (retângulo + matriz de furos) e a pilha de
-   operações do Montador.
-   Acoplamento explícito: este módulo LÊ e ESCREVE em SEQ diretamente (aplicarDesenho,
-   operacoesVinculadas) e depende de globais definidos no <script> principal de
-   montador_macro_cnc_2.html, carregados antes deste arquivo: $, cfg(), toast(), fnum(),
-   SEQ, UID, SELECIONADO, DEFS, F_TROCA, renderPilha(), refresh(), showStage(); e do
-   módulo CAD2D (cad2d.js) para as entidades livres do desenho.
-   Superfície exposta: DESENHO2D = { render, aplicar, avisos, salvar, carregar, sincronizado }. */
+/* desenho2d.js — vínculo entre o desenho guiado (retângulo + matriz de furos) e o CAD 2D
+   local do Montador.
+   Acoplamento explícito: este módulo ESCREVE entidades `circle` em CAD.entities via
+   CAD2D.substituirOrigem() (aplicarDesenho) e depende de globais definidos no <script>
+   principal de montador_macro_cnc_2.html, carregados antes deste arquivo: $, cfg(),
+   toast(), fnum(); e do módulo CAD2D (cad2d.js), carregado depois deste arquivo mas já
+   presente como global no momento em que aplicarDesenho() é chamado (boot só clica nos
+   botões depois de CAD2D.init()).
+   Superfície exposta: DESENHO2D = { render, aplicar, avisos, salvar, carregar, sincronizado }.
+   A matriz de furos não cria operação (SEQ) — ela só gera geometria no CAD; virar
+   operação de furação a partir da geometria é trabalho da etapa 3. */
 
-/* Primeiro vínculo CAD -> operações: retângulo e matriz de furos.
+/* Primeiro vínculo CAD -> geometria: retângulo e matriz de furos.
    Nenhuma decisão automática de condição de corte ou remoção do contorno. */
 const DESENHO_ID='retangulo-furos-v1';
 const DESENHO_CAMPOS=[
@@ -62,28 +65,25 @@ function avisosDesenho(){
  return out;
 }
 function assinaturaDesenho(){return JSON.stringify(DESENHO.p);}
-function operacoesVinculadas(){return SEQ.filter(b=>b.desenho2D?.origem===DESENHO_ID);}
+function furosDesenho(p){
+ // cadRound: global de cad2d.js (carregado antes deste arquivo), mesma precisão das entidades do CAD.
+ const out=[];
+ fileirasDesenho(p).forEach((row,j)=>{for(let i=0;i<row.n;i++)out.push({x:cadRound(row.x0+i*row.ix),y:cadRound(row.y0),dia:row.dia,fileira:j,furo:i});});
+ return out;
+}
+function entidadesVinculadas(){return CAD2D.entidades().filter(e=>e.desenho2D?.origem===DESENHO_ID);}
 function desenhoSincronizado(){
  if(validarDesenho(DESENHO.p).length||DESENHO.confirmado!==assinaturaDesenho())return false;
- const expected=fileirasDesenho(DESENHO.p),linked=operacoesVinculadas();
- return linked.length===expected.length&&expected.every((p,i)=>{const found=linked.filter(b=>b.desenho2D.fileira===i);return found.length===1&&found[0].tipo==='furosL'&&Object.keys(p).every(k=>found[0].p[k]===p[k]);});
+ const esperados=furosDesenho(DESENHO.p),vinculados=entidadesVinculadas();
+ return vinculados.length===esperados.length&&esperados.every(f=>vinculados.some(e=>e.desenho2D.fileira===f.fileira&&e.desenho2D.furo===f.furo&&e.x===f.x&&e.y===f.y&&e.r===f.dia/2));
 }
 function aplicarDesenho(){
  const errors=validarDesenho(DESENHO.p);
  if(errors.length){toast('Corrija os campos do desenho para confirmar a geometria.');renderDesenhos();return;}
- const rows=fileirasDesenho(DESENHO.p),linked=operacoesVinculadas(),first=SEQ.findIndex(b=>b.desenho2D?.origem===DESENHO_ID);
- const made=rows.map((row,i)=>{
-  const old=linked.find(b=>b.desenho2D.fileira===i&&b.tipo==='furosL');
-  const p={};DEFS.furosL.params.forEach(f=>p[f.k]=f.d);F_TROCA.forEach(f=>p[f.k]=f.d);
-  if(old)Object.assign(p,old.p);else p.td=DESENHO.p.diametro;
-  Object.assign(p,row);
-  return {uid:old?old.uid:UID++,tipo:'furosL',aberto:false,p,desenho2D:{origem:DESENHO_ID,fileira:i}};
- });
- // Reconciliar somente o grupo vinculado; operações independentes mantêm seus dados e ordem.
- const before=first<0?SEQ.length:SEQ.slice(0,first).filter(b=>b.desenho2D?.origem!==DESENHO_ID).length;
- SEQ=SEQ.filter(b=>b.desenho2D?.origem!==DESENHO_ID);SEQ.splice(before,0,...made);
- DESENHO.confirmado=assinaturaDesenho();SELECIONADO=made[0].uid;
- renderPilha();refresh();toast('Desenho aplicado. Revise ferramenta, avanço e profundidade em Planejamento.');
+ const furos=furosDesenho(DESENHO.p).map(f=>({type:'circle',x:f.x,y:f.y,r:f.dia/2,desenho2D:{origem:DESENHO_ID,fileira:f.fileira,furo:f.furo}}));
+ if(!CAD2D.substituirOrigem(DESENHO_ID,furos)){toast('Limite de entidades do CAD atingido — reduza o desenho livre ou a matriz.');return;}
+ DESENHO.confirmado=assinaturaDesenho();
+ renderDesenhos();toast('Desenho aplicado. Os furos entraram no CAD 2D — virar operação de furação é a próxima etapa.');
 }
 function camposDesenho(prefix,keys){return keys.map(k=>{
  const [,label,unit,step]=DESENHO_CAMPOS.find(f=>f[0]===k);
@@ -91,9 +91,9 @@ function camposDesenho(prefix,keys){return keys.map(k=>{
 }).join('');}
 function centroDesenho(prefix){return `<div class="draft-center"><div class="draft-toolbar"><span>mm · X0 Y0 no centro · Z0 na face</span><button class="btn" data-fit-drawing>Ajustar vista</button></div><svg id="${prefix}-svg" class="draft-svg" role="img" aria-label="Retângulo cotado e padrão de furos"></svg><div class="draft-bottom" data-drawing-summary></div></div>`;}
 $('drawing').className='stage draft-grid';
-$('drawing').innerHTML=`<aside class="draft-panel"><h2>Geometria</h2><button class="draft-entity" data-drawing-select="contorno">▱ Retângulo · 4 retas</button><button class="draft-entity" data-drawing-select="furos">○ Padrão de furos</button><div class="draft-count" data-drawing-count></div><h3>Escopo atual</h3><p>Retângulo e matriz de furos com medidas vinculadas.</p><p>Contornos livres, arcos e importação DXF entram nas próximas etapas.</p></aside>${centroDesenho('draw')}<aside class="draft-panel"><h2>Propriedades / Controles</h2>${camposDesenho('draw',['largura','altura','mx','my','nx','ny','diametro'])}<button class="btn primary" data-apply-drawing>Confirmar geometria e vincular</button><button class="btn" data-go-planning>Revisar operações</button><div data-drawing-status class="draft-status"></div><p>O retângulo é referência. Esta etapa gera somente a furação, sem usinar o contorno.</p></aside>`;
+$('drawing').innerHTML=`<aside class="draft-panel"><h2>Geometria</h2><button class="draft-entity" data-drawing-select="contorno">▱ Retângulo · 4 retas</button><button class="draft-entity" data-drawing-select="furos">○ Padrão de furos</button><div class="draft-count" data-drawing-count></div><h3>Escopo atual</h3><p>Retângulo e matriz de furos com medidas vinculadas.</p><p>Contornos livres, arcos e importação DXF entram nas próximas etapas.</p></aside>${centroDesenho('draw')}<aside class="draft-panel"><h2>Propriedades / Controles</h2>${camposDesenho('draw',['largura','altura','mx','my','nx','ny','diametro'])}<button class="btn primary" data-apply-drawing>Confirmar geometria e vincular</button><button class="btn" data-go-cad2d>Ver no CAD 2D</button><div data-drawing-status class="draft-status"></div><p>O retângulo é referência. Os furos entram como geometria no CAD 2D; virar operação de furação é a próxima etapa.</p></aside>`;
 $('parameters').className='stage draft-grid';
-$('parameters').innerHTML=`<aside class="draft-panel"><h2>Parâmetros da peça</h2>${camposDesenho('param',['largura','altura','mx','my','nx','ny','diametro'])}<button class="btn primary" data-apply-drawing>Atualizar operações vinculadas</button><div data-drawing-status class="draft-status"></div></aside>${centroDesenho('param')}<aside class="draft-panel"><h2>Vínculos</h2><div class="draft-links">Primeiro centro X<br><code>−comprimento / 2 + margem X</code></div><div class="draft-links">Passo entre furos<br><code>(comprimento − 2 × margem X) / (quantidade X − 1)</code></div><div class="draft-links">Fileiras em Y<br><code>(largura − 2 × margem Y) / (quantidade Y − 1)</code></div><p>Com uma única posição no eixo, o centro é zero. As margens desse eixo ficam sem efeito.</p><p>As margens permanecem fixas quando as dimensões mudam. Não há escala automática do diâmetro.</p><div class="notice">Os vínculos são recalculados no aplicativo. O Macro B exportado usa coordenadas calculadas e laços por fileira.</div></aside>`;
+$('parameters').innerHTML=`<aside class="draft-panel"><h2>Parâmetros da peça</h2>${camposDesenho('param',['largura','altura','mx','my','nx','ny','diametro'])}<button class="btn primary" data-apply-drawing>Atualizar geometria vinculada</button><div data-drawing-status class="draft-status"></div></aside>${centroDesenho('param')}<aside class="draft-panel"><h2>Vínculos</h2><div class="draft-links">Primeiro centro X<br><code>−comprimento / 2 + margem X</code></div><div class="draft-links">Passo entre furos<br><code>(comprimento − 2 × margem X) / (quantidade X − 1)</code></div><div class="draft-links">Fileiras em Y<br><code>(largura − 2 × margem Y) / (quantidade Y − 1)</code></div><p>Com uma única posição no eixo, o centro é zero. As margens desse eixo ficam sem efeito.</p><p>As margens permanecem fixas quando as dimensões mudam. Não há escala automática do diâmetro.</p><div class="notice">Os vínculos são recalculados no aplicativo. O Macro B exportado usa coordenadas calculadas e laços por fileira.</div></aside>`;
 function atualizarCamposDesenho(skip){document.querySelectorAll('[data-drawing-key]').forEach(el=>{if(el!==skip)el.value=DESENHO.p[el.dataset.drawingKey]??'';});}
 function desenharSVG(svg){
  const p=DESENHO.p;if(validarDesenho(p).length){svg.replaceChildren();return;}
@@ -109,21 +109,20 @@ function renderDesenhos(){
  document.querySelectorAll('.draft-svg').forEach(desenharSVG);
  document.querySelectorAll('[data-drawing-select]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.drawingSelect===desenhoSelecao)));
  document.querySelectorAll('[data-drawing-count]').forEach(el=>el.textContent=errors.length?'Geometria incompleta':`${DESENHO.p.nx*DESENHO.p.ny} furos · ${DESENHO.p.ny} fileiras`);
- document.querySelectorAll('[data-drawing-status]').forEach(el=>{el.className='draft-status '+(errors.length?'invalid':sync&&!warnings.length?'':'pending');el.textContent=errors.length?errors.join(' '):(sync?'Geometria vinculada às operações.':'Alterações aguardam confirmação para atualizar o programa.')+(warnings.length?' '+warnings.join(' '):'');});
- document.querySelectorAll('[data-drawing-summary]').forEach(el=>el.textContent=errors.length?'Confira os campos para visualizar.':`Retângulo ${fnum(DESENHO.p.largura)} × ${fnum(DESENHO.p.altura)} mm · Furos Ø${fnum(DESENHO.p.diametro)} · ${sync?'operações atualizadas':'desenho em edição'}`);
+ document.querySelectorAll('[data-drawing-status]').forEach(el=>{el.className='draft-status '+(errors.length?'invalid':sync&&!warnings.length?'':'pending');el.textContent=errors.length?errors.join(' '):(sync?'Geometria vinculada ao CAD 2D.':'Alterações aguardam confirmação para atualizar o CAD 2D.')+(warnings.length?' '+warnings.join(' '):'');});
+ document.querySelectorAll('[data-drawing-summary]').forEach(el=>el.textContent=errors.length?'Confira os campos para visualizar.':`Retângulo ${fnum(DESENHO.p.largura)} × ${fnum(DESENHO.p.altura)} mm · Furos Ø${fnum(DESENHO.p.diametro)} · ${sync?'furos no CAD 2D':'desenho em edição'}`);
 }
 document.querySelectorAll('[data-drawing-key]').forEach(el=>el.addEventListener('input',()=>{DESENHO.p[el.dataset.drawingKey]=el.value===''?null:Number(el.value);atualizarCamposDesenho(el);renderDesenhos();atualizarAvisoDesenho();}));
 document.querySelectorAll('[data-apply-drawing]').forEach(el=>el.addEventListener('click',aplicarDesenho));
-document.querySelectorAll('[data-go-planning]').forEach(el=>el.addEventListener('click',()=>showStage('planning')));
+document.querySelectorAll('[data-go-cad2d]').forEach(el=>el.addEventListener('click',()=>$('cad-mode')?.click()));
 document.querySelectorAll('[data-fit-drawing]').forEach(el=>el.addEventListener('click',renderDesenhos));
 document.querySelectorAll('[data-drawing-select]').forEach(el=>el.addEventListener('click',()=>{desenhoSelecao=el.dataset.drawingSelect;renderDesenhos();}));
 function atualizarAvisoDesenho(){
  $('drawing-warning')?.remove();
- if(!DESENHO.confirmado&&!operacoesVinculadas().length)return;
+ if(!DESENHO.confirmado&&!entidadesVinculadas().length)return;
  const messages=[];
- if(!desenhoSincronizado())messages.push('Desenho 2D e operações divergentes. Confirme a geometria para atualizar; o programa abaixo mantém os valores das operações.');
+ if(!desenhoSincronizado())messages.push('Desenho 2D e geometria vinculada divergentes. Confirme a geometria para atualizar o CAD 2D.');
  messages.push(...avisosDesenho());
- if(operacoesVinculadas().some(b=>b.p.td!==b.p.dia))messages.push('Diâmetro da ferramenta difere do furo desenhado. Revise a broca no Planejamento.');
  if(messages.length){const el=document.createElement('div');el.id='drawing-warning';el.className='warnrow';el.textContent=messages.join(' ');$('warns').prepend(el);}
 }
 atualizarCamposDesenho();renderDesenhos();
