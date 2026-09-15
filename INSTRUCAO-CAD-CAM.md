@@ -251,7 +251,84 @@ raio de círculo. `verificar.cjs` passa.
 
 ---
 
-### Etapa 5 — contorno e faceamento sobre o desenho
+### Etapa 5 — cotas de desenho técnico e a aba Parâmetros no modelo real
+
+*Duas pendências, uma herdada da Etapa 2 e outra da Etapa 4. Ambas de interface;
+nenhuma toca a geração de G-code.*
+
+---
+
+**5a — a aba Parâmetros ainda desenha o mundo antigo.**
+
+`desenharSVG()` (`src/ui/desenho2d.js`, por volta da linha 98) desenha a partir de
+`DESENHO.p` — largura, altura, matriz de furos — e **não** de `CAD.entities`:
+
+```js
+function desenharSVG(svg){
+  const p=DESENHO.p; ...   // ← parâmetros, não a geometria real
+```
+
+É o último resto do cérebro dividido que a Etapa 2 unificou. Você desenha uma peça
+no CAD e a aba Parâmetros mostra outra figura, genérica.
+
+Trocar o corpo de `desenharSVG()` por um render das entidades reais
+(`CAD2D.entidades()`), com o mesmo enquadramento automático que o `cadFit()` já
+faz. Os campos paramétricos e o painel de vínculos **ficam como estão** — só a
+figura passa a ser a geometria de verdade.
+
+A matriz de furos continua existindo como geradora de entidades (Etapa 2). O que
+muda é que a tela mostra `CAD.entities`, não uma reconstrução paralela.
+
+**Aceite:** desenhar uma reta e um círculo à mão, ir para Parâmetros, e ver esses
+dois elementos — não um retângulo genérico.
+
+---
+
+**5b — cota como desenho técnico, não etiqueta.**
+
+Hoje a cota é um `<text>` solto perto da entidade (`cad-dimension` /
+`cad-dim-entity`). A referência do painel **02** da imagem mostra o padrão
+esperado: o `100` em cima com setas atravessando a largura, o `80` na lateral, o
+`R25` com linha de chamada saindo do raio, o `4x Ø10` embaixo.
+
+Uma cota linear precisa de quatro elementos:
+
+1. **linha de cota** paralela à medida, deslocada da peça;
+2. **duas linhas de chamada** perpendiculares, saindo da entidade e ultrapassando
+   um pouco a linha de cota;
+3. **setas** nas duas pontas da linha de cota;
+4. **texto centrado** sobre a linha de cota.
+
+Para raio e diâmetro: linha de chamada saindo do centro, seta na circunferência,
+texto com prefixo `R` ou `Ø`.
+
+O deslocamento da linha de cota em relação à peça é o ponto que o usuário já
+escolhe hoje ao clicar onde a cota aparece — reaproveite esse ponto, não invente
+outro controle.
+
+---
+
+**5c — texto de cota em tamanho fixo na tela.**
+
+Hoje o `font-size` da cota é derivado de `cadView`, então o texto encolhe ao
+afastar o zoom e fica ilegível. Em desenho técnico o texto mantém tamanho de
+leitura seja qual for a escala.
+
+Recalcule o tamanho a partir da escala atual, de modo que a cota ocupe sempre os
+mesmos pixels na tela. Vale o mesmo para a espessura das linhas de chamada e para
+as setas — use `vector-effect="non-scaling-stroke"`, como o resto do CAD já usa
+nas formas.
+
+---
+
+**Aceite da etapa:** desenhar o retângulo com o rebaixo curvo e os quatro furos da
+imagem, cotar comprimento, altura e diâmetro, e a tela ficar reconhecível ao lado
+do painel 02. Dar zoom para perto e para longe — o texto continua legível nas
+duas pontas. `verificar.cjs` passa (nada aqui toca o G-code).
+
+---
+
+### Etapa 6 — contorno e faceamento sobre o desenho
 
 Com a via provada, mais dois tipos:
 
@@ -266,7 +343,7 @@ externo, e o preview 3D mostrar o caminho acompanhando o desenho.
 
 ---
 
-### Etapa 6 — os números da simulação
+### Etapa 7 — os números da simulação
 
 O painel **05** da imagem mostra tempo estimado, material removido e comprimento
 de trajetória. O `execNC` (`src/core/simulador.js`) já devolve os segmentos do
