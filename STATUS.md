@@ -1,8 +1,9 @@
 # Estado atual — CNC Suite
 
-Atualizado em: 2026-09-11
-Base auditada: 18da56e21f6422b9d2133371a62db0e3ea2c7e9a (master)
-Etapa: correção compacta aplicada localmente; registros em revisão, sem commit.
+Atualizado em: 2026-09-14
+Base auditada: 4b72619 (master) — reorganização estrutural concluída (INSTRUCAO-ARQUITETURA.md)
+Etapa: cinco etapas de reorganização de pastas/módulos commitadas; CLAUDE.md/STATUS.md
+sendo fechados nesta entrega final da fase.
 
 ## Direção atual — 12/09/2026
 
@@ -15,14 +16,15 @@ A imagem define a direção visual, não regras de usinagem nem funções já pr
 ## Antes de trabalhar
 
 Ler CLAUDE.md e DIARIO.md. Este arquivo resume o estado e não substitui as regras.
-Preservar fichas JSON, programas anotados e as duas interfaces.
+Preservar fichas JSON, programas anotados (`amostras/programas_anotados/`) e a
+interface única (Montador — `estudio_cnc.html` foi aposentado, ver seção abaixo).
 Mudanças seguem diff separado, revisão do Leonardo e um arquivo por vez.
 Navegador: somente http://localhost:8000, servidor iniciado por Leonardo
 com py -m http.server 8000 em C:/Projetos/cnc-suite. file:// é proibido.
 
 ## Base disponível
 
-- Motor compartilhado pelas duas interfaces HTML.
+- Motor em `src/core/` (sete módulos, ex-`engine.js`), único consumidor: o Montador.
 - Nativas: face, furosL, furosC.
 - Seis estratégias auditadas; sétima ficha local canalRaiadoConcentrico fora desta entrega.
 - Campos condicionais, derivadas, conferência e exportação .NC.
@@ -216,3 +218,33 @@ cirurgia de DOM em runtime que existia antes. `engine.js` não foi tocado.
 Commits: 91e8fa6, 20a683c, 3e56097, 3a6d74c, d0ae556.
 G-code comparado (antes.NC/depois.NC) idêntico a cada etapa; console sem erro/aviso.
 Nova estrutura de arquivos documentada em CLAUDE.md.
+
+
+## Reorganização estrutural — 14/09/2026, concluída (INSTRUCAO-ARQUITETURA.md)
+
+As seis etapas da instrução foram aplicadas e commitadas, uma por vez com diff
+próprio, com `ferramentas/verificar.cjs` (hash SHA-256 do G-code de um projeto de
+referência fixo) como teste de regressão principal a cada etapa:
+
+- **Etapa 0** — `ferramentas/verificar.cjs` criado; equivalência com o navegador
+  confirmada uma vez antes de confiar no harness.
+- **Etapa 1** (98dbbf5) — `estudio_cnc.html` aposentado (`git rm`); Montador é a
+  única interface do projeto. Recuperável do histórico do git se necessário.
+- **Etapa 2** (71d6e45) — pastas criadas (`estilos/`, `dados/`, `src/ui/`,
+  `amostras/`) com `git mv`; `1-PESCADOR.NC` duplicado na raiz removido (cópia em
+  `amostras/programas_anotados/` preservada); `.gitignore` criado.
+- **Etapa 3** (85e01b1) — `ferramentas/build-estrategias.js` criado: regenera
+  `dados/estrategias.js` a partir dos `.json` de família; saída idêntica ao
+  arquivo escrito à mão confirmada (`git diff` vazio).
+- **Etapa 4** (c7e390f) — `engine.js` (875 linhas) quebrado em sete módulos de
+  `src/core/`: `formato.js`, `simulador.js`, `operacoes.js`, `macros.js`,
+  `fichas.js`, `programa.js`, `corte.js`. `engine.js` deixou de existir.
+- **Etapa 5** (4b72619) — script inline do Montador esvaziado em quatro módulos
+  de `src/ui/`: `preview3d.js`, `modal-macro.js`, `pilha.js`, `paleta.js`. Script
+  inline restante no HTML abaixo de 150 linhas (boot + refresh geral).
+
+G-code byte a byte idêntico confirmado a cada etapa via `verificar.cjs`; preview
+3D, paleta, pilha e cadastro de macro conferidos no navegador ao final. Nenhuma
+linha de lógica de usinagem mudou — só a organização em arquivos.
+`CLAUDE.md` atualizado com a estrutura de pastas, a ordem de carga dos scripts e
+a regra de decisão de arquivo novo (`src/core/` vs `src/ui/`).

@@ -4,24 +4,95 @@ Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar com o código d
 
 ## O que é isto
 
-Duas aplicações HTML para montar visualmente código G de usinagem no padrão Fanuc **Macro B** (a interface e os comentários do código estão em português). Não há build system, gerenciador de pacotes, suíte de testes nem servidor — é HTML/CSS/JS puro que roda abrindo direto no navegador.
+Uma aplicação HTML para montar visualmente código G de usinagem no padrão Fanuc **Macro B** (a interface e os comentários do código estão em português). Não há build system obrigatório, gerenciador de pacotes nem suíte de testes end-to-end — é HTML/CSS/JS puro que roda de um servidor local; os scripts de `ferramentas/` rodam sob demanda no Node, nunca em tempo de página.
 
-- `montador_macro_cnc_2.html` — construtor estilo "Lego" para desktop, **interface ativa** do desenvolvimento atual. Nasce já no layout final de shell fixo (menu de sete etapas: Projetos, Desenho 2D, Parâmetros, Planejamento, Simulação, Programa, Configurações — `data-stage` nos botões, navegação por `showStage()`/`stageInfo`, sem cirurgia de DOM em runtime). Na etapa Planejamento, uma paleta de botões de operação adiciona blocos a uma lista ordenada ("pilha"); cada bloco expande em um formulário para editar seus parâmetros.
-- `engine.js` — **o motor de usinagem compartilhado** (definições de blocos `DEFS`/`ORDEM`, montagem do programa `gerarPrograma`, interpretador de G-code `execNC`, macros personalizadas). Antes esse código era copiado dentro de cada HTML; hoje mora num arquivo só, carregado pelos dois via `<script src="engine.js"></script>`. **Uma correção na lógica de usinagem agora vale para os dois apps de uma vez** — não é mais preciso duplicar a mudança. Os HTML ficam só com a interface (SVG, formulários, abas) e o setup do Three.js.
-- `ui.css` — estilo compartilhado entre os dois HTML (tokens `:root`, tipografia, `.btn`, `.card`, `.field`, `.warnrow`, toast, `<pre>` de código). Cada HTML carrega `<link rel="stylesheet" href="ui.css">` antes do seu `<style>` remanescente, que guarda só o que é específico daquela interface.
-- `cad2d.js` — CAD 2D local do Montador: entidades geométricas independentes do percurso CNC (reta, retângulo, círculo, arco), com seleção, undo/redo, snap em grade/pontos, vínculo de medida principal entre entidades e zoom/pan. Superfície exposta: `CAD2D = { init, render, fit, salvar, carregar, entidades }`. Depende de `$` e `fnum` (globais definidos pelo HTML host) e é carregado depois de `estrategias.js`.
-- `desenho2d.js` — vínculo entre o desenho guiado (retângulo + matriz de furos) e a pilha de operações (`SEQ`) do Montador; é o único módulo que escreve em `SEQ` (via `aplicarDesenho`/`operacoesVinculadas`), acoplamento documentado no topo do próprio arquivo. Superfície exposta: `DESENHO2D = { render, aplicar, avisos, salvar, carregar, sincronizado }`. Depende de globais do `<script>` principal do Montador (`$`, `cfg()`, `toast()`, `fnum()`, `SEQ`, `UID`, `SELECIONADO`, `DEFS`, `F_TROCA`, `renderPilha()`, `refresh()`, `showStage()`) e do `CAD2D` (para as entidades livres), sendo o último `<script>` carregado no HTML.
+`estudio_cnc.html` foi aposentado (decisão do Leonardo, `INSTRUCAO-ARQUITETURA.md`) — o Montador é a única interface do projeto. Recuperar o histórico se necessário: `git show <commit>:estudio_cnc.html`.
+
+- `montador_macro_cnc_2.html` — construtor estilo "Lego" para desktop, **única interface** do projeto. Shell fixo (menu de sete etapas: Projetos, Desenho 2D, Parâmetros, Planejamento, Simulação, Programa, Configurações — `data-stage` nos botões, navegação por `showStage()`/`stageInfo`, sem cirurgia de DOM em runtime). Na etapa Planejamento, uma paleta de botões de operação adiciona blocos a uma lista ordenada ("pilha"); cada bloco expande em um formulário para editar seus parâmetros. O script inline do próprio HTML ficou abaixo de 150 linhas — só o boot e o "refresh geral" (código + avisos + 3D), que funciona como maestro chamando os módulos de `src/ui/`.
+
+## Estrutura de pastas
+
+```
+/
+├─ montador_macro_cnc_2.html     ← única interface
+├─ src/
+│  ├─ core/          ← domínio puro, sem DOM (ex-engine.js)
+│  │   formato.js · simulador.js · operacoes.js · macros.js
+│  │   fichas.js · programa.js · corte.js
+│  └─ ui/            ← tudo que toca o DOM
+│      cad2d.js · preview3d.js · modal-macro.js
+│      pilha.js · paleta.js · desenho2d.js
+├─ estilos/
+│   ui.css
+├─ dados/
+│   estrategias_canal.json · estrategias_escareado.json · estrategias_bolsa.json  ← fonte da verdade
+│   estrategias.js          ← DERIVADO, gerado por ferramentas/build-estrategias.js
+├─ ferramentas/
+│   verificar.cjs · build-estrategias.js · baseline.txt
+├─ amostras/
+│   programas_anotados/
+└─ docs/
+```
+
+**Regra de decisão para arquivo novo:** toca o DOM? Não → `src/core/`. Sim → `src/ui/`. Duas pastas, sem terceira categoria.
+
+## Ordem de carga dos scripts (`montador_macro_cnc_2.html`)
+
+```
+<link href="estilos/ui.css">                (+ <style> remanescente do próprio HTML, só o que é específico da interface)
+<script src=".../three.min.js">             (CDN, r128)
+<script src="src/core/formato.js">
+<script src="src/core/simulador.js">
+<script src="src/core/operacoes.js">
+<script src="src/core/macros.js">
+<script src="src/core/fichas.js">
+<script src="src/core/programa.js">
+<script src="src/core/corte.js">
+<script src="dados/estrategias.js">
+<script src="src/ui/cad2d.js">
+<script> ... helpers globais ($ , clamp, toast) ... </script>
+<script src="src/ui/preview3d.js">
+<script src="src/ui/modal-macro.js">
+<script src="src/ui/pilha.js">
+<script src="src/ui/paleta.js">
+<script> ... refresh geral + boot de UI da página ... </script>
+<script src="src/ui/desenho2d.js">           (último — depende de tudo acima)
+<script> ... boot final: CAD2D.init(); init3D(); renderPilha(); refresh(); </script>
+```
+
+Cada arquivo novo declara no próprio cabeçalho (duas linhas: o que faz e de quem depende) — mantenha esse hábito ao criar ou mexer em módulos. **Scripts clássicos** (`<script src>`), não ES modules — ES modules exigiriam servidor sempre e reescrita de todos os arquivos; fora de escopo por ora.
 
 ## Rodando / desenvolvendo
 
-Não há CLI. Para testar uma mudança, basta abrir o arquivo `.html` alterado no navegador (duplo clique, ou arrastar para uma aba do navegador). Os dois arquivos carregam o Three.js r128 e Google Fonts via CDN em tempo de execução — é preciso conexão com a internet para o preview 3D e as fontes; o app degrada graciosamente sem o Three.js (a flag `TEM3D` desativa o painel 3D, mas a geração de código continua funcionando).
+Sem `file://` — carregar `src/core/*.js`/`dados/estrategias.js` por `<script src>` funciona em `file://`, mas o fluxo de teste do projeto é via servidor local: `py -m http.server 8000` em `C:/Projetos/cnc-suite`, depois `http://localhost:8000/montador_macro_cnc_2.html`. O app carrega o Three.js r128 e Google Fonts via CDN em tempo de execução — é preciso conexão com a internet para o preview 3D e as fontes; degrada graciosamente sem o Three.js (a flag `TEM3D` desativa o painel 3D, mas a geração de código continua funcionando).
 
-Não há suíte de testes automatizada. Verifique as mudanças manualmente no navegador: adicione/edite blocos, confira o código gerado no painel CÓDIGO/"Programa gerado" e confira se o preview 3D atualiza.
+**Rede de proteção — `ferramentas/verificar.cjs`:** carrega os módulos de `src/core/` + `dados/estrategias.js` em Node (stub mínimo de `document`), monta um projeto de referência fixo (operação nativa + ficha JSON + macro custom), chama `gerarPrograma()` e compara o SHA-256 da saída com `ferramentas/baseline.txt`.
 
-## Arquitetura principal (implementada em `engine.js`)
+```bash
+node ferramentas/verificar.cjs            # compara com o baseline; sai com código 1 se divergir
+node ferramentas/verificar.cjs --salvar   # grava ferramentas/baseline.txt
+```
+
+Rode isso como teste principal a cada mudança em `src/core/` — roda em segundos, sem navegador. Depois, no navegador (`localhost:8000`): console sem erro, e confira o código gerado no painel CÓDIGO/"Programa gerado" e se o preview 3D atualiza. Se `verificar.cjs` divergir, reverta a mudança em vez de consertar por cima — a saída de G-code deve ser byte a byte idêntica antes/depois de qualquer refatoração estrutural.
+
+## Arquitetura principal (`src/core/`, ex-`engine.js`)
+
+O antigo `engine.js` (monólito de ~875 linhas) foi quebrado em sete módulos por responsabilidade — a lógica de usinagem em si não mudou, só a organização em arquivos:
+
+| Módulo | Responsabilidade |
+|---|---|
+| `formato.js` | helpers de formatação numérica/texto (`num`, `fnum`, `fx`, `noAcc`) — sem dependências |
+| `operacoes.js` | operações nativas (`DEFS`, `ORDEM`): faceamento e furação em linha/círculo |
+| `macros.js` | macros cruas cadastradas pelo usuário (`CUSTOM`/`registrarCustom`) |
+| `fichas.js` | interpretador de estratégias em JSON (`avaliarExpr`, `interpretarEstrategia`, `registrarEstrategia`) |
+| `programa.js` | estado da sequência de blocos (`SEQ`/`SELECIONADO`/`UID`), `cfg()` e montagem final do G-code (`gerarPrograma`, `coletarWarns`) |
+| `simulador.js` | interpretador Fanuc/Macro B (`execNC`) — sem dependências de outros módulos |
+| `corte.js` | parâmetros de corte por material (Vc/fz) e helpers puros do modal "Cadastrar macro" |
+
+Uma correção de lógica de usinagem mexe só nesses arquivos — a interface (`src/ui/`) não precisa mudar. `montador_macro_cnc_2.html` fica só com a interface (SVG, formulários, abas) e o setup do Three.js.
 
 ### `DEFS` — o registro de operações
-`DEFS` é um objeto indexado pelo id da operação (`face`, `furosL`, `furosC`, além das **fichas de estratégia** registradas do `estrategias.js` e de qualquer macro personalizada cadastrada pelo usuário). Cada entrada define um tipo de operação de usinagem:
+`DEFS` é um objeto indexado pelo id da operação (`face`, `furosL`, `furosC`, além das **fichas de estratégia** registradas de `dados/estrategias.js` e de qualquer macro personalizada cadastrada pelo usuário). Cada entrada define um tipo de operação de usinagem:
 
 ```
 DEFS[id] = {
@@ -34,35 +105,55 @@ DEFS[id] = {
 ```
 `ORDEM` define a ordem de exibição dos ids nativos na paleta.
 
-Adicionar uma operação nativa significa incluir uma entrada em `DEFS` e seu id em `ORDEM` **no `engine.js`** — o motor é compartilhado, vale pras duas interfaces de uma vez. Mas o caminho preferido pra operação nova é **ficha JSON de estratégia**, não código nativo (ver a decisão firme nº 2 do DIARIO.md).
+Adicionar uma operação nativa significa incluir uma entrada em `DEFS` e seu id em `ORDEM` **em `src/core/operacoes.js`**. Mas o caminho preferido pra operação nova é **ficha JSON de estratégia**, não código nativo (ver a decisão firme nº 2 do DIARIO.md e a regra de decisão da seção 3 abaixo).
 
 ### Macros personalizadas do usuário
-O usuário pode colar código Macro B bruto (com tokens `{parametro}`, além dos tokens reservados `{DIAM}`/`{RF}` para Ø/raio da ferramenta ativa) através do modal "Cadastrar macro". `registrarCustom(id, raw)` encapsula essa definição bruta em uma entrada `DEFS[id]` normal:
+O usuário pode colar código Macro B bruto (com tokens `{parametro}`, além dos tokens reservados `{DIAM}`/`{RF}` para Ø/raio da ferramenta ativa) através do modal "Cadastrar macro" (`src/ui/modal-macro.js`). `registrarCustom(id, raw)` (`src/core/macros.js`) encapsula essa definição bruta em uma entrada `DEFS[id]` normal:
 - `warn`/`gerar` substituem os `{tokens}` pelos valores dos parâmetros e renumeram os rótulos `N10`–`N99` e os `GOTO` correspondentes pelo offset `nb` do bloco, para que macros coladas nunca colidam com outros blocos.
-- Como macros personalizadas não têm um `volume()` escrito à mão, seu preview 3D é produzido executando o G-code gerado através do interpretador `execNC` e desenhando o caminho de ferramenta resultante como segmentos de linha em vez de um sólido.
+- Como macros personalizadas não têm um `volume()` escrito à mão, seu preview 3D é produzido executando o G-code gerado através do interpretador `execNC` (`src/core/simulador.js`) e desenhando o caminho de ferramenta resultante como segmentos de linha em vez de um sólido.
 
-### Estratégias em JSON — o interpretador
+### Estratégias em JSON — o interpretador (`src/core/fichas.js`)
 Estratégias de usinagem são **dados** (fichas JSON), nunca código fixo em JS. `interpretarEstrategia(est, p, c, nb, d)` executa a ficha em 5 passos: lê os inputs → calcula as derivadas na ordem declarada → avalia os avisos (informativos, nunca bloqueiam) → resolve os placeholders `{chave}` do template com `fnum()` → emite as linhas. `avaliarExpr(expr, ctx)` avalia as expressões das fichas (aritmética + comparadores) por descida recursiva, sem `eval()`. `registrarEstrategia(id, est)` embrulha a ficha numa entrada `DEFS[id]` normal (registro global `ESTRATEGIAS`, espelho do papel de `CUSTOM`), com preview 3D desenhado via `execNC` como nas macros personalizadas.
 
-As fichas suportam **campos condicionais e exibidos**: um input pode ter `sel` (vira dropdown; o valor é coagido pra número no interpretador) e `quando` (expressão sobre os outros inputs — o campo só aparece quando ela dá verdadeiro); uma derivada pode ser uma **lista de casos** `[{quando, expr}, ..., {expr}]` (primeiro que casa vence, o sem `quando` é o padrão); avisos aceitam `quando` opcional; e a seção `"saidas"` declara **mostradores readonly** de derivadas (sub-bloco "Conferência" nos apps), com `quando` próprio. O template aceita **linha condicional**: além de strings, uma linha pode ser um objeto `{quando, l}` — emitida só quando o `quando` der verdadeiro (ex.: o liga/desliga do espelhamento G51.1 da `bolsaFinal`); erro no `quando` **omite** a linha e vira aviso. O `avaliarExpr` tem as funções `TAN()`/`ATAN()` em **graus**. O `interpretarEstrategia` retorna `{linhas, avisos, ctx}` — o `ctx` alimenta as saídas.
+As fichas suportam **campos condicionais e exibidos**: um input pode ter `sel` (vira dropdown; o valor é coagido pra número no interpretador) e `quando` (expressão sobre os outros inputs — o campo só aparece quando ela dá verdadeiro); uma derivada pode ser uma **lista de casos** `[{quando, expr}, ..., {expr}]` (primeiro que casa vence, o sem `quando` é o padrão); avisos aceitam `quando` opcional; e a seção `"saidas"` declara **mostradores readonly** de derivadas (sub-bloco "Conferência" na interface), com `quando` próprio. O template aceita **linha condicional**: além de strings, uma linha pode ser um objeto `{quando, l}` — emitida só quando o `quando` der verdadeiro (ex.: o liga/desliga do espelhamento G51.1 da `bolsaFinal`); erro no `quando` **omite** a linha e vira aviso. O `avaliarExpr` tem as funções `TAN()`/`ATAN()` em **graus**. O `interpretarEstrategia` retorna `{linhas, avisos, ctx}` — o `ctx` alimenta as saídas.
 
-**Regra fonte-da-verdade:** as estratégias vivem em **um arquivo por família** — `estrategias_canal.json`, `estrategias_escareado.json`, e assim por diante. Esses arquivos de família são a FONTE DA VERDADE das estratégias — preserve-os; o `estrategias_canal.json` continua sendo o formato de referência do interpretador. O `estrategias.js` (carregado pelos HTMLs via `<script>` porque `fetch` de `.json` falha em `file://`) é **derivado**: a **junção** das estratégias de todos os arquivos de família — e continua sendo o único arquivo que os HTMLs carregam. Quando qualquer `.json` de família mudar, o `.js` precisa ser **regenerado a partir dos `.json`** (receita no cabeçalho do próprio `estrategias.js`) — nunca editar os dois em paralelo à mão. Futuramente essa regeneração deve virar um passo de build automático.
+**Regra fonte-da-verdade:** as estratégias vivem em **um arquivo por família**, em `dados/` — `estrategias_canal.json`, `estrategias_escareado.json`, `estrategias_bolsa.json`, e assim por diante. Esses arquivos de família são a FONTE DA VERDADE das estratégias — preserve-os; `estrategias_canal.json` continua sendo o formato de referência do interpretador. O `dados/estrategias.js` (carregado pelo HTML via `<script>` porque `fetch` de `.json` falha em `file://`) é **derivado**: a **junção** das estratégias de todos os arquivos de família — e continua sendo o único arquivo que o HTML carrega. Quando qualquer `.json` de família mudar, regenere com:
 
-**Conversão de operações antigas — `programas_anotados/`:** os programas G-code anotados pelo Leo com o padrão de marcas `@ED` (vira input), `@FX` (lógica fixa, não tocar) e `@CR` (crítico) ficam guardados em `programas_anotados/` — são o banco de conhecimento das conversões e **não podem se perder**. Cada conversão vira uma ficha JSON no arquivo da sua família; o julgamento do que é editável é do Leo (as marcas), a tradução para JSON é do Claude. A primeira conversão pelo método foi o escareado helicoidal (`programas_anotados/escareado_helicoidal.NC` → `estrategias_escareado.json`).
+```bash
+node ferramentas/build-estrategias.js
+```
 
-### Montagem do programa — `gerarPrograma()`
+Esse script lê os `.json` de família em `dados/`, concatena na ordem canal → escareado → bolsa, e regrava `dados/estrategias.js`. Confirme `git diff dados/estrategias.js` vazio (ou a mudança esperada) depois de rodar — nunca edite os dois em paralelo à mão.
+
+**Regra de decisão — operação nova é ficha JSON, não código nativo** (decisão firme nº 2 do DIARIO.md): só vira `DEFS` nativo em `operacoes.js` quando a lógica não cabe no interpretador de fichas (ex.: geometria que precisa de `volume()` 3D escrito à mão). Por padrão, prefira uma ficha JSON em `dados/`.
+
+**Conversão de operações antigas — `amostras/programas_anotados/`:** os programas G-code anotados pelo Leo com o padrão de marcas `@ED` (vira input), `@FX` (lógica fixa, não tocar) e `@CR` (crítico) ficam guardados em `amostras/programas_anotados/` — são o banco de conhecimento das conversões e **não podem se perder**. Cada conversão vira uma ficha JSON no arquivo da sua família; o julgamento do que é editável é do Leo (as marcas), a tradução para JSON é do Claude. A primeira conversão pelo método foi o escareado helicoidal (`escareado_helicoidal.NC` → `estrategias_escareado.json`).
+
+### Montagem do programa — `gerarPrograma()` (`src/core/programa.js`)
 Percorre a sequência ordenada de blocos (`SEQ`) e, para cada bloco:
 - Só emite troca de ferramenta (`T`, `M6`, `G54`, `S...M3M8`, `G43`) quando a ferramenta (`t`/`th`/`tdd`) realmente muda em relação ao bloco anterior — caso contrário, atualiza só o `S` se apenas a rotação mudou.
 - Chama o `DEFS[...].gerar(p, c, nb, d)` daquele bloco com `nb = (índice+1)*100`, de forma que os rótulos `N` de cada bloco vivem na sua própria centena (bloco 1 usa N110/N120/…, bloco 2 usa N210/N220/…) e nunca colidem.
-- Reaproveita um conjunto fixo de variáveis de macro entre os blocos (documentado em um comentário acima de `DEFS` em `engine.js`, por volta da linha 50): `#1` passo Z, `#2` Z atual, `#4` profundidade, `#5`/`#6` meias-medidas úteis, `#12` passe lateral, `#13` direção, `#15` contador/offset, `#23`/`#24` centro X/Y, `#26` Z de segurança global, `#30`/`#31` posição do furo. Tenha essa convenção em mente ao editar ou criar corpos de `gerar()` — esses números dependem de não colidir dentro do próprio código de um bloco.
+- Reaproveita um conjunto fixo de variáveis de macro entre os blocos (documentado em comentário no topo de `src/core/operacoes.js`): `#1` passo Z, `#2` Z atual, `#4` profundidade, `#5`/`#6` meias-medidas úteis, `#12` passe lateral, `#13` direção, `#15` contador/offset, `#23`/`#24` centro X/Y, `#26` Z de segurança global, `#30`/`#31` posição do furo. Tenha essa convenção em mente ao editar ou criar corpos de `gerar()` — esses números dependem de não colidir dentro do próprio código de um bloco.
 
 Convenção de zero/referência usada em todo o código: **X0/Y0 no centro do bloco de material, Z0 na face superior**.
 
-### Validação — `coletarWarns()`
+### Validação — `coletarWarns()` (`src/core/programa.js`)
 Reúne os avisos do `warn()` de cada bloco mais algumas regras gerais (ex.: passo Z acima de 1,5× o Ø da ferramenta, avanço de mergulho acima de ~50% do avanço de corte). Os avisos são apenas informativos — não bloqueiam a geração do código.
 
-### `execNC(texto)` — o interpretador de G-code embutido
-Um pequeno simulador de Fanuc/Macro B que analisa uma string de G-code (remove comentários/rótulos, avalia expressões com variáveis `#` e `IF/GOTO`) e retorna segmentos de movimento (`{ax,ay,az,bx,by,bz,rapid}`) para o preview 3D. É usado em duas situações: para desenhar o caminho de ferramenta de blocos de macro personalizada (ver acima) e na função "Importar .NC no preview", que permite carregar um arquivo `.NC` externo e ver seu caminho de ferramenta sobreposto na vista 3D.
+### `execNC(texto)` — o interpretador de G-code embutido (`src/core/simulador.js`)
+Um pequeno simulador de Fanuc/Macro B que analisa uma string de G-code (remove comentários/rótulos, avalia expressões com variáveis `#` e `IF/GOTO`) e retorna segmentos de movimento (`{ax,ay,az,bx,by,bz,rapid}`) para o preview 3D. É usado em duas situações: para desenhar o caminho de ferramenta de blocos de macro personalizada/ficha (ver acima) e na função "Importar .NC no preview", que permite carregar um arquivo `.NC` externo e ver seu caminho de ferramenta sobreposto na vista 3D.
 
 ### Persistência
-Sem backend e sem `localStorage` — "Salvar projeto"/"Salvar montagem" serializa `{cfg, seq: SEQ, custom: CUSTOM}` em um arquivo `.json` baixado; "Abrir" recarrega o estado a partir de um arquivo `.json` enviado. O G-code gerado em si é exportado via "Baixar .NC" como um download de texto simples.
+Sem backend e sem `localStorage`/`sessionStorage` — "Salvar montagem" serializa `{cfg, seq: SEQ, custom: CUSTOM}` em um arquivo `.json` baixado; "Abrir" recarrega o estado a partir de um arquivo `.json` enviado. O G-code gerado em si é exportado via "Baixar .NC" como um download de texto simples.
+
+## Arquitetura de interface (`src/ui/`)
+
+- `cad2d.js` — CAD 2D local do Montador: entidades geométricas independentes do percurso CNC (reta, retângulo, círculo, arco), com seleção, undo/redo, snap em grade/pontos, vínculo de medida principal entre entidades e zoom/pan. Superfície exposta: `CAD2D = { init, render, fit, salvar, carregar, entidades }`. Depende de `$` e `fnum` (globais definidos pelo HTML host); carregado logo após `dados/estrategias.js`.
+- `preview3d.js` — preview 3D (Three.js) do Montador: cena, câmera, bloco de material, volumes de remoção por operação e caminho de ferramenta dos `.NC` importados. Mapeamento CNC → cena: `three(x, z, -y)` · Z0 = topo do bloco. Depende de globais definidos no `<script>` principal do HTML.
+- `modal-macro.js` — modal "Cadastrar/editar macro": formulário de parâmetros, checagem de tokens/variáveis `#` do código colado e persistência via `registrarCustom`/`removerCustom`.
+- `pilha.js` — pilha de blocos: renderização dos cards de operação, campos condicionais/saídas de ficha, edição, reordenar/duplicar/remover, salvar/abrir/limpar montagem e copiar/baixar o G-code gerado.
+- `paleta.js` — paleta de operações (botões que adicionam blocos à pilha). Depende de `ORDEM`/`DEFS`/`CUSTOM`/`ESTRATEGIAS` (core), `F_TROCA`, `SEQ`, `UID`, `SELECIONADO`, `toast()`, `renderPilha()`, `refresh()`, `abrirEditor()` (modal-macro.js).
+- `desenho2d.js` — vínculo entre o desenho guiado (retângulo + matriz de furos) e a pilha de operações (`SEQ`); é o único módulo que escreve em `SEQ` (via `aplicarDesenho`/`operacoesVinculadas`), acoplamento documentado no topo do próprio arquivo. Superfície exposta: `DESENHO2D = { render, aplicar, avisos, salvar, carregar, sincronizado }`. Depende de globais do `<script>` principal (`$`, `cfg()`, `toast()`, `fnum()`, `SEQ`, `UID`, `SELECIONADO`, `DEFS`, `F_TROCA`, `renderPilha()`, `refresh()`, `showStage()`) e do `CAD2D`; é o último `<script>` de módulo carregado no HTML.
+
+## `estilos/ui.css`
+Estilo único da interface (tokens `:root`, tipografia, `.btn`, `.card`, `.field`, `.warnrow`, toast, `<pre>` de código). O HTML carrega `<link rel="stylesheet" href="estilos/ui.css">` antes do seu `<style>` remanescente, que guarda só o que é específico da interface.
