@@ -1,10 +1,11 @@
 "use strict";
 /* ============================================================
    VERIFICAR.CJS — rede de proteção da Etapa 0 (INSTRUCAO-ARQUITETURA.md)
-   Carrega engine.js + estrategias.js em Node (stub minimo de document via
-   um $ global) num vm.Context compartilhado, monta um projeto de
-   referencia fixo (operacao nativa + ficha JSON + macro custom), chama
-   gerarPrograma() e compara o SHA-256 da saida com ferramentas/baseline.txt.
+   Carrega os módulos de src/core/ + dados/estrategias.js em Node (stub
+   minimo de document via um $ global) num vm.Context compartilhado, monta
+   um projeto de referencia fixo (operacao nativa + ficha JSON + macro
+   custom), chama gerarPrograma() e compara o SHA-256 da saida com
+   ferramentas/baseline.txt.
 
    node ferramentas/verificar.cjs            # compara com o baseline
    node ferramentas/verificar.cjs --salvar    # grava ferramentas/baseline.txt
@@ -17,8 +18,8 @@ const vm = require("vm");
 const RAIZ = path.join(__dirname, "..");
 const BASELINE = path.join(__dirname, "baseline.txt");
 
-/* Stub dos 6 campos fixos que cfg() lê via $() — engine.js não toca
-   no DOM fora disso. */
+/* Stub dos 6 campos fixos que cfg() (src/core/programa.js) lê via $() —
+   o motor não toca no DOM fora disso. */
 const CAMPOS = {
   "g-nome": { value: "PROJETO_TESTE" },
   "g-seg": { value: "25" },
@@ -37,7 +38,13 @@ function carregar(nomeArquivo) {
   vm.runInContext(codigo, contexto, { filename: nomeArquivo });
 }
 
-carregar("engine.js");
+carregar("src/core/formato.js");
+carregar("src/core/simulador.js");
+carregar("src/core/operacoes.js");
+carregar("src/core/macros.js");
+carregar("src/core/fichas.js");
+carregar("src/core/programa.js");
+carregar("src/core/corte.js");
 carregar("dados/estrategias.js");
 
 /* Projeto de referência: 1 operação nativa + 1 ficha JSON + 1 macro

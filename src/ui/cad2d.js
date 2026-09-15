@@ -1,6 +1,6 @@
 "use strict";
 /* CAD 2D local: entidades independentes do percurso CNC.
-   Depende de $ (getElementById) e fnum (engine.js), definidos pelo HTML host.
+   Depende de $ (getElementById) e fnum (src/core/formato.js), definidos pelo HTML host.
    CAD2D.init() deve ser chamado no boot, depois que $ existir e o DOM da
    aba de desenho estiver presente. */
 const CAD_NAMES={line:'Reta',rect:'Retângulo',circle:'Círculo',arc:'Arco'};
