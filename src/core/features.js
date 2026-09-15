@@ -22,7 +22,6 @@ const FEATURES = {
       if(!e) return;
       if(e.type==="circle"||e.type==="arc") pts.push({x:e.x-e.r,y:e.y-e.r},{x:e.x+e.r,y:e.y+e.r});
       else if(e.type==="line") pts.push({x:e.x,y:e.y},{x:e.x2,y:e.y2});
-      else if(e.type==="rect") pts.push({x:e.x,y:e.y},{x:e.x+e.w,y:e.y+e.h});
     });
     if(!pts.length) return null;
     const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);

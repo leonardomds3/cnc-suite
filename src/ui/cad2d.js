@@ -16,30 +16,35 @@
    sobre uma entidade previamente selecionada.
    Etapa 5 (INSTRUCAO-CAD-CAM.md): cadShape/cadEndpoints/cadDimGroup/cadEscala são
    reaproveitadas por src/ui/desenho2d.js (carregado depois) para desenhar a
-   geometria real do CAD na aba Parâmetros — mesma aparência, sem duplicar lógica. */
-const CAD_NAMES={line:'Reta',rect:'Retângulo',circle:'Círculo',arc:'Arco',dim:'Cota'};
-const CAD_GROUP_ORDER=['line','rect','arc','circle','dim'];
-const CAD_GROUP_LABELS={line:'Retas',rect:'Retângulos',arc:'Arcos',circle:'Furos',dim:'Cotas'};
-const CAD_FIELDS={line:[['x','X inicial'],['y','Y inicial'],['x2','X final'],['y2','Y final']],rect:[['x','X inferior esquerdo'],['y','Y inferior esquerdo'],['w','Comprimento'],['h','Altura']],circle:[['x','Centro X'],['y','Centro Y'],['r','Raio']],arc:[['x','Centro X'],['y','Centro Y'],['r','Raio'],['a0','Ângulo inicial (°)'],['a1','Ângulo final (°)']],dim:[['x','X do texto'],['y','Y do texto']]};
+   geometria real do CAD na aba Parâmetros — mesma aparência, sem duplicar lógica.
+   Etapa 5 (contorno em segmentos): `rect` deixou de ser um tipo de entidade
+   armazenado — a ferramenta "Retângulo" (cadTool==='rect') monta 4 entidades
+   `line` de uma vez (cadAddRect), marcadas com `rectGrupo` compartilhado, para
+   dar para selecionar/cotar/apagar cada lado sozinho. `.json` salvo antes desta
+   etapa ainda guarda `rect`; cadCarregar converte via cadExpandirRects antes de
+   validar. */
+const CAD_NAMES={line:'Reta',circle:'Círculo',arc:'Arco',dim:'Cota'};
+const CAD_GROUP_ORDER=['line','arc','circle','dim'];
+const CAD_GROUP_LABELS={line:'Retas',arc:'Arcos',circle:'Furos',dim:'Cotas'};
+const CAD_FIELDS={line:[['x','X inicial'],['y','Y inicial'],['x2','X final'],['y2','Y final']],circle:[['x','Centro X'],['y','Centro Y'],['r','Raio']],arc:[['x','Centro X'],['y','Centro Y'],['r','Raio'],['a0','Ângulo inicial (°)'],['a1','Ângulo final (°)']],dim:[['x','X do texto'],['y','Y do texto']]};
 /* Etapa 4b: uma cota governa um único campo (sem solver) — o mesmo mapeamento
    que o vínculo de medida (cadWriteSize/cadApplyLinks) já usa. */
-const CAD_MEDIDA_LABELS={comprimento:'Comprimento',largura:'Largura',raio:'Raio'};
-function cadMedida(type){return type==='line'?'comprimento':type==='rect'?'largura':'raio';}
+const CAD_MEDIDA_LABELS={comprimento:'Comprimento',raio:'Raio'};
+function cadMedida(type){return type==='line'?'comprimento':'raio';}
 let CAD={version:1,next:1,entities:[]},cadSelected=new Set(),cadTool='select',cadPoints=[],cadHover=null,cadDrag=null,cadShowDim=true,cadDimRef=null,cadEntry=null;
 let cadView={x:-120,y:-90,w:240,h:180},cadUndo=[],cadRedo=[];
 const cadClone=x=>JSON.parse(JSON.stringify(x));
 const cadAngle=(c,p)=>(Math.atan2(p.y-c.y,p.x-c.x)*180/Math.PI+360)%360;
 const cadRound=n=>Math.round(n*1e6)/1e6;
-function cadSize(e){if(e.type==='line')return Math.hypot(e.x2-e.x,e.y2-e.y);return e.type==='rect'?e.w:e.r;}
+function cadSize(e){if(e.type==='line')return Math.hypot(e.x2-e.x,e.y2-e.y);return e.r;}
 function cadValid(e){
  if(e.type==='dim')return Number.isFinite(e.x)&&Math.abs(e.x)<=100000&&Number.isFinite(e.y)&&Math.abs(e.y)<=100000&&Number.isSafeInteger(e.ref)&&typeof e.medida==='string';
- return CAD_FIELDS[e.type]&&CAD_FIELDS[e.type].every(([k])=>Number.isFinite(e[k])&&Math.abs(e[k])<=100000)&&cadSize(e)>0&&(e.type!=='rect'||e.h>0)&&(e.type!=='arc'||Math.abs(((e.a1-e.a0)%360+360)%360)>1e-7);
+ return CAD_FIELDS[e.type]&&CAD_FIELDS[e.type].every(([k])=>Number.isFinite(e[k])&&Math.abs(e[k])<=100000)&&cadSize(e)>0&&(e.type!=='arc'||Math.abs(((e.a1-e.a0)%360+360)%360)>1e-7);
 }
 /* Etapa 4c: escreve uma medida de volta na entidade (vínculo e cota usam a
    mesma regra — cada uma governa um único campo, sem solver). */
 function cadWriteSize(e,size){
  if(e.type==='line'){const angle=Math.atan2(e.y2-e.y,e.x2-e.x);e.x2=cadRound(e.x+size*Math.cos(angle));e.y2=cadRound(e.y+size*Math.sin(angle));}
- else if(e.type==='rect')e.w=size;
  else e.r=size;
 }
 function cadApplyLinks(entities){
@@ -63,13 +68,31 @@ function cadCommit(mutator){
 function cadNew(type,points){
  const a=points[0],b=points[1];let e={type,x:a.x,y:a.y};
  if(type==='line')Object.assign(e,{x2:b.x,y2:b.y});
- if(type==='rect')Object.assign(e,{x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)});
  if(type==='circle'||type==='arc')e.r=Math.hypot(b.x-a.x,b.y-a.y);
  if(type==='arc')Object.assign(e,{a0:cadAngle(a,b),a1:cadAngle(a,points[2])});
  if(type==='dim'){const refEntity=CAD.entities.find(x=>x.id===cadDimRef);Object.assign(e,{ref:cadDimRef,medida:refEntity?cadMedida(refEntity.type):'comprimento'});}
  return e;
 }
 function cadAdd(e){return cadCommit(next=>{const id=next.next++;next.entities.push({...e,id});cadSelected=new Set([id]);});}
+/* Etapa 5: "Retângulo" é atalho de construção — os dois pontos viram 4 `line`
+   independentes (para poder selecionar/cotar/apagar cada lado), compartilhando
+   `rectGrupo` só como marca de origem (agrupamento futuro, ex. Aparar). */
+function cadRectCorners(a,b){
+ const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
+ return [{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h}];
+}
+function cadRectLines(a,b,grupo){
+ const c=cadRectCorners(a,b);
+ return c.map((p,i)=>({type:'line',x:p.x,y:p.y,x2:c[(i+1)%4].x,y2:c[(i+1)%4].y,rectGrupo:grupo}));
+}
+function cadAddRect(points){
+ const [a,b]=points;
+ return cadCommit(next=>{
+  const grupo=next.next,ids=[];
+  cadRectLines(a,b,grupo).forEach(linha=>{const id=next.next++;next.entities.push({...linha,id});ids.push(id);});
+  cadSelected=new Set(ids);
+ });
+}
 /* Etapa 4a: entrada por valor — mesma fórmula para toda ferramenta de desenho:
    ponto = ponto_anterior + direção_do_cursor × valor_digitado. O ponto anterior
    é o último ponto já clicado (cadPoints); por isso só existe entrada por valor
@@ -87,14 +110,13 @@ function cadEntryPoint(){
 function cadPlacePoint(p){
  cadPoints.push(p);
  const need=cadTool==='arc'?3:cadTool==='dim'?1:2;
- if(cadPoints.length===need){cadAdd(cadNew(cadTool,cadPoints));cadPoints=[];cadHover=null;}
+ if(cadPoints.length===need){if(cadTool==='rect')cadAddRect(cadPoints);else cadAdd(cadNew(cadTool,cadPoints));cadPoints=[];cadHover=null;}
  cadEntry=null;
  cadRenderCanvas();
 }
 function cadEndpoints(e){
  if(e.type==='dim')return [{x:e.x,y:e.y}];
  if(e.type==='line')return [{x:e.x,y:e.y},{x:e.x2,y:e.y2}];
- if(e.type==='rect')return [{x:e.x,y:e.y},{x:e.x+e.w,y:e.y},{x:e.x+e.w,y:e.y+e.h},{x:e.x,y:e.y+e.h}];
  const angles=e.type==='arc'?[e.a0,e.a1]:[0,90,180,270];
  return [{x:e.x,y:e.y},...angles.map(a=>({x:e.x+e.r*Math.cos(a*Math.PI/180),y:e.y+e.r*Math.sin(a*Math.PI/180)}))];
 }
@@ -159,7 +181,6 @@ function cadDimGroup(e,font,sel){
 function cadShape(e,cls,hit=false){
  const attrs=`class="${cls}" ${hit?`data-cad-id="${e.id}"`:''}`;
  if(e.type==='line')return `<line ${attrs} x1="${e.x}" y1="${-e.y}" x2="${e.x2}" y2="${-e.y2}"/>`;
- if(e.type==='rect')return `<rect ${attrs} x="${e.x}" y="${-e.y-e.h}" width="${e.w}" height="${e.h}"/>`;
  if(e.type==='circle')return `<circle ${attrs} cx="${e.x}" cy="${-e.y}" r="${e.r}"/>`;
  const a=e.a0*Math.PI/180,b=e.a1*Math.PI/180,delta=((e.a1-e.a0)%360+360)%360;
  return `<path ${attrs} d="M${e.x+e.r*Math.cos(a)},${-e.y-e.r*Math.sin(a)} A${e.r},${e.r} 0 ${delta>180?1:0} 0 ${e.x+e.r*Math.cos(b)},${-e.y-e.r*Math.sin(b)}"/>`;
@@ -173,10 +194,13 @@ function cadRenderCanvas(){
   const e=cadDrag?.kind==='move'&&source.id===cadDrag.id?cadDrag.preview:source;
   if(e.type==='dim'){body+=cadDimGroup(e,font,cadSelected.has(e.id));return;}
   body+=cadShape(e,'cad-hit',true)+cadShape(e,'cad-shape'+(cadSelected.has(e.id)?' selected':''),true);
-  if(cadShowDim){const label=e.type==='line'?'L '+fnum(cadSize(e)):e.type==='rect'?fnum(e.w)+' × '+fnum(e.h):'R '+fnum(e.r);body+=`<text class="cad-dimension" x="${e.x}" y="${-e.y-font}" font-size="${font}">${label}${e.link!=null?' ↔ #'+e.link:''}</text>`;}
+  if(cadShowDim){const label=e.type==='line'?'L '+fnum(cadSize(e)):'R '+fnum(e.r);body+=`<text class="cad-dimension" x="${e.x}" y="${-e.y-font}" font-size="${font}">${label}${e.link!=null?' ↔ #'+e.link:''}</text>`;}
  });
  const hp=cadEntry?(cadEntryPoint()||cadHover):cadHover;
- if(cadPoints.length&&hp){try{let e;if(cadTool==='arc'&&cadPoints.length===1)e=cadNew('circle',[cadPoints[0],hp]);else e=cadNew(cadTool,[...cadPoints,hp]);if(cadValid(e))body+=cadShape(e,'cad-preview');}catch(_){}}
+ if(cadPoints.length&&hp){try{
+  if(cadTool==='rect'){const lados=cadRectLines(cadPoints[0],hp,0);if(lados.every(l=>cadSize(l)>0))body+=lados.map(l=>cadShape(l,'cad-preview')).join('');}
+  else{let e;if(cadTool==='arc'&&cadPoints.length===1)e=cadNew('circle',[cadPoints[0],hp]);else e=cadNew(cadTool,[...cadPoints,hp]);if(cadValid(e))body+=cadShape(e,'cad-preview');}
+ }catch(_){}}
  if(cadHover)body+=`<circle cx="${cadHover.x}" cy="${-cadHover.y}" r="${font*.25}" fill="#42d9ef" pointer-events="none"/>`;
  if(cadEntry&&cadHover&&cadPoints.length){
   const anchor=cadPoints[cadPoints.length-1];
@@ -202,7 +226,7 @@ function cadRenderProperties(){
  const label=document.createElement('label');label.htmlFor='cad-link';label.textContent='Vincular medida principal a';el.append(label);
  const select=document.createElement('select');select.id='cad-link';const none=document.createElement('option');none.value='';none.textContent='Sem vínculo';select.append(none);
  CAD.entities.filter(x=>x.id!==e.id&&x.type!=='dim').forEach(x=>{const opt=document.createElement('option');opt.value=x.id;opt.textContent=CAD_NAMES[x.type]+' #'+x.id+' · '+fnum(cadSize(x))+' mm';select.append(opt);});select.value=e.link??'';el.append(select);
- const hint=document.createElement('p');hint.className='hint';hint.textContent='Vínculo de igualdade: comprimento da reta, largura do retângulo ou raio do círculo/arco. A direção e as demais medidas são preservadas.';el.append(hint);
+ const hint=document.createElement('p');hint.className='hint';hint.textContent='Vínculo de igualdade: comprimento da reta ou raio do círculo/arco. A direção e as demais medidas são preservadas.';el.append(hint);
  const apply=document.createElement('button');apply.className='btn primary';apply.textContent='Aplicar propriedades';apply.addEventListener('click',()=>{
   const updated={...e};for(const inp of el.querySelectorAll('[data-cad-key]')){if(inp.value===''){ $('cad-message').textContent='Preencha todas as coordenadas.';return;}updated[inp.dataset.cadKey]=Number(inp.value);}
   if(select.value==='')delete updated.link;else updated.link=Number(select.value);
@@ -298,7 +322,7 @@ function cadInit(){
   const tool=b.dataset.cadTool;
   if(tool==='dim'){
    const ids=[...cadSelected],ref=ids.length===1?CAD.entities.find(x=>x.id===ids[0]):null;
-   if(!ref||ref.type==='dim'){$('cad-message').textContent='Selecione uma reta, retângulo, círculo ou arco antes de usar Cota.';return;}
+   if(!ref||ref.type==='dim'){$('cad-message').textContent='Selecione uma reta, círculo ou arco antes de usar Cota.';return;}
    cadDimRef=ref.id;
   }
   cadTool=tool;cadPoints=[];cadHover=null;cadEntry=null;cadRender();
@@ -360,12 +384,42 @@ function cadInit(){
  cadRender();
 }
 function cadSalvar(){return cadClone(CAD);}
+/* Etapa 5: retrocompatibilidade — `.json` salvo antes desta etapa guarda `rect`
+   como entidade única. Converte cada uma em 4 `line` com ids novos (acima do
+   maior id do arquivo) antes de validar, e reaponta qualquer `dim`/`link` que
+   apontava para o rect (sempre medida 'largura', único campo que um rect podia
+   ter cotado/vinculado) para a reta que corresponde ao lado `w`. */
+function cadExpandirRects(rawEntities){
+ const maxId=Math.max(0,...rawEntities.map(e=>Number.isSafeInteger(e?.id)?e.id:0));
+ let nextId=maxId+1;
+ const larguraId=new Map();
+ const expandido=[];
+ rawEntities.forEach(e=>{
+  if(!e||e.type!=='rect'){expandido.push(e);return;}
+  const grupo=nextId;
+  const ids=cadRectCorners({x:e.x,y:e.y},{x:e.x+e.w,y:e.y+e.h}).map((p,i,corners)=>{
+   const q=corners[(i+1)%4],id=nextId++;
+   const linha={id,type:'line',x:p.x,y:p.y,x2:q.x,y2:q.y,rectGrupo:grupo};
+   if(i===0){if(e.link!=null)linha.link=e.link;if(e.desenho2D)linha.desenho2D=e.desenho2D;}
+   expandido.push(linha);
+   return id;
+  });
+  larguraId.set(e.id,ids[0]);
+ });
+ expandido.forEach(e=>{
+  if(e.type==='dim'&&larguraId.has(e.ref)){e.ref=larguraId.get(e.ref);e.medida='comprimento';}
+  if(e.link!=null&&larguraId.has(e.link))e.link=larguraId.get(e.link);
+ });
+ return expandido;
+}
 function cadCarregar(data){
  CAD={version:1,next:1,entities:[]};cadUndo=[];cadRedo=[];cadSelected=new Set();cadPoints=[];cadDrag=null;cadHover=null;
  if(data){
-  if(data.version!==1||!Array.isArray(data.entities)||data.entities.length>500)throw Error('Formato de desenho livre inválido.');
+  if(data.version!==1||!Array.isArray(data.entities))throw Error('Formato de desenho livre inválido.');
+  const raw=cadExpandirRects(data.entities);
+  if(raw.length>500)throw Error('Formato de desenho livre inválido.');
   const ids=new Set();
-  const entities=data.entities.map(e=>{if(!Number.isSafeInteger(e.id)||e.id<1||ids.has(e.id)||!cadValid(e))throw Error('Entidade de desenho inválida.');ids.add(e.id);const clean={id:e.id,type:e.type};CAD_FIELDS[e.type].forEach(([k])=>clean[k]=e[k]);if(e.link!=null&&e.type!=='dim')clean.link=e.link;if(e.desenho2D)clean.desenho2D=e.desenho2D;if(e.type==='dim'){clean.ref=e.ref;clean.medida=e.medida;}return clean;});
+  const entities=raw.map(e=>{if(!Number.isSafeInteger(e.id)||e.id<1||ids.has(e.id)||!cadValid(e))throw Error('Entidade de desenho inválida.');ids.add(e.id);const clean={id:e.id,type:e.type};CAD_FIELDS[e.type].forEach(([k])=>clean[k]=e[k]);if(e.link!=null&&e.type!=='dim')clean.link=e.link;if(e.desenho2D)clean.desenho2D=e.desenho2D;if(e.type==='line'&&e.rectGrupo!=null)clean.rectGrupo=e.rectGrupo;if(e.type==='dim'){clean.ref=e.ref;clean.medida=e.medida;}return clean;});
   cadApplyLinks(entities);
   CAD={version:1,next:Math.max(0,...ids)+1,entities};
  }
