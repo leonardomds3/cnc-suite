@@ -37,12 +37,18 @@ const F_TROCA = [
 
 /* Resolve b.geo (ids de entidades do CAD2D) em params efetivos pros DEFS[...].
    Bloco sem geo (ou geo vazio) usa b.p sem alteração — retrocompatibilidade
-   total com projetos salvos antes da Etapa 3 (INSTRUCAO-CAD-CAM.md). */
+   total com projetos salvos antes da Etapa 3 (INSTRUCAO-CAD-CAM.md).
+   Etapa 9: além de `furos` (furosL), injeta `contorno` (DEFS.contorno) e
+   `limites` (DEFS.face ancorado) — cada DEFS só olha o campo que usa, então
+   computar os três sempre é mais simples do que ramificar por tipo aqui. */
 function paramsEfetivos(b){
   if(!Array.isArray(b.geo)||!b.geo.length) return b.p;
   const entidades = typeof CAD2D!=="undefined" ? CAD2D.entidades() : [];
   const referenciadas = b.geo.map(id=>entidades.find(e=>e.id===id)).filter(Boolean);
-  return {...b.p, furos: FEATURES.furos(referenciadas)};
+  return {...b.p,
+    furos: FEATURES.furos(referenciadas),
+    contorno: FEATURES.contorno(referenciadas),
+    limites: FEATURES.limites(referenciadas)};
 }
 
 function gerarPrograma(){

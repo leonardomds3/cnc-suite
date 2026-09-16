@@ -35,7 +35,11 @@
    parâmetro t ao longo da reta clicada (0=início, 1=fim); cadTrimLine acha o
    trecho entre os dois cruzamentos mais próximos do clique e remove só ele —
    sobra uma reta encurtada (cruzamento numa ponta) ou duas retas novas
-   (cruzamento no meio, a segunda ganha id e cota novos). */
+   (cruzamento no meio, a segunda ganha id e cota novos).
+   Etapa 9: "Criar contorno" (cadContornoSelecionados, usa FEATURES.contorno de
+   src/core/features.js, carregado antes deste arquivo) e "Criar faceamento"
+   (cadFaceamentoSelecionados) seguem o mesmo padrão da Etapa 3 — botão só liga
+   quando a seleção serve para a operação, addBloco('contorno'|'face',{geo}). */
 const CAD_NAMES={line:'Reta',circle:'Círculo',arc:'Arco',dim:'Cota'};
 const CAD_GROUP_ORDER=['line','arc','circle','dim'];
 const CAD_GROUP_LABELS={line:'Retas',arc:'Arcos',circle:'Furos',dim:'Cotas'};
@@ -320,12 +324,45 @@ function cadFuracaoSelecionados(){
  const entidades=ids.map(id=>CAD.entities.find(e=>e.id===id));
  return entidades.every(e=>e&&e.type==='circle') ? ids : null;
 }
+/* Etapa 9: "Criar contorno" só habilita quando a seleção fecha uma cadeia única de
+   retas/arcos (FEATURES.contorno devolve non-null) — mesmo critério que o Contorno
+   usa em warn()/gerar(), então o botão nunca liga para uma seleção que a operação
+   recusaria. */
+function cadContornoSelecionados(){
+ const ids=[...cadSelected];
+ if(ids.length<2) return null;
+ const entidades=ids.map(id=>CAD.entities.find(e=>e.id===id));
+ if(!entidades.every(e=>e&&(e.type==='line'||e.type==='arc'))) return null;
+ return FEATURES.contorno(entidades) ? ids : null;
+}
+/* Etapa 9: "Criar faceamento" aceita qualquer seleção não vazia de geometria (não
+   cota) — FEATURES.limites() só precisa da caixa que envolve as entidades. */
+function cadFaceamentoSelecionados(){
+ const ids=[...cadSelected];
+ if(!ids.length) return null;
+ const entidades=ids.map(id=>CAD.entities.find(e=>e.id===id));
+ return entidades.every(e=>e&&e.type!=='dim') ? ids : null;
+}
 function cadRenderFuracaoBotao(){
  const btn=$('cad-criar-furacao'); if(!btn) return;
  const ids=cadFuracaoSelecionados();
  btn.disabled=!ids;
  btn.textContent=ids?`+ Criar furação (${ids.length})`:'+ Criar furação';
  btn.title=ids?'':'Selecione um ou mais círculos para criar a operação de furação.';
+ const bc=$('cad-criar-contorno');
+ if(bc){
+  const idsC=cadContornoSelecionados();
+  bc.disabled=!idsC;
+  bc.textContent=idsC?`+ Criar contorno (${idsC.length})`:'+ Criar contorno';
+  bc.title=idsC?'':'Selecione uma cadeia fechada de retas/arcos para criar o contorno.';
+ }
+ const bf=$('cad-criar-faceamento');
+ if(bf){
+  const idsF=cadFaceamentoSelecionados();
+  bf.disabled=!idsF;
+  bf.textContent=idsF?`+ Criar faceamento (${idsF.length})`:'+ Criar faceamento';
+  bf.title=idsF?'':'Selecione a geometria da peça para criar o faceamento.';
+ }
 }
 function cadDelete(){if(!cadSelected.size)return;const ids=new Set(cadSelected);cadCommit(next=>{next.entities=next.entities.filter(e=>!ids.has(e.id)&&!(e.type==='dim'&&ids.has(e.ref)));next.entities.forEach(e=>{if(e.link!=null&&ids.has(e.link))delete e.link;});});}
 function cadSubstituirOrigem(origem,novas){
@@ -405,7 +442,7 @@ function cadInit(){
  const modes=document.createElement('div');modes.className='drawing-modes';modes.innerHTML='<button id="cad-mode" aria-pressed="true">Desenho livre</button><button id="matrix-mode" aria-pressed="false">Padrão de furos vinculado</button>';
  const matrix=document.createElement('div');matrix.id='matrix-mode-content';matrix.className='drawing-mode draft-grid';matrix.hidden=true;matrix.append(...drawingChildren);
  const free=document.createElement('div');free.id='cad-mode-content';free.className='drawing-mode cad-grid';
- free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><button id="cad-criar-furacao" class="btn primary" disabled>+ Criar furação</button><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button data-cad-tool="trim" title="Clique no trecho da reta que quer remover.">Aparar</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho ou digite a medida (comprimento/ângulo, Tab alterna, Enter confirma). Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input id="cad-showdim" type="checkbox" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
+ free.innerHTML=`<aside class="cad-side"><h2>Geometria</h2><div id="cad-groups" class="cad-list"></div><button id="cad-criar-furacao" class="btn primary" disabled>+ Criar furação</button><button id="cad-criar-contorno" class="btn primary" disabled>+ Criar contorno</button><button id="cad-criar-faceamento" class="btn primary" disabled>+ Criar faceamento</button><h2>Ferramentas</h2><div class="cad-tools"><button data-cad-tool="select">Selecionar</button><button data-cad-tool="move">Mover</button><button id="cad-copy" disabled title="Em construção">Copiar</button><button data-cad-tool="trim" title="Clique no trecho da reta que quer remover.">Aparar</button><button class="cad-action" id="cad-delete">Excluir</button></div><h2>Desenhar</h2><div class="cad-tools">${[['line','Reta'],['rect','Retângulo'],['circle','Círculo'],['arc','Arco'],['pan','Deslocar vista']].map(([key,label])=>`<button data-cad-tool="${key}">${label}</button>`).join('')}</div><div class="cad-actions"><button class="cad-action" id="cad-undo" title="Desfazer">↶</button><button class="cad-action" id="cad-redo" title="Refazer">↷</button></div><p class="hint">Clique os pontos na área de desenho ou digite a medida (comprimento/ângulo, Tab alterna, Enter confirma). Esc cancela. Shift+clique soma à seleção. Arcos: centro, início e direção final, em sentido anti-horário.</p></aside><div class="cad-center"><div class="cad-toolbar"><label><input id="cad-snap" type="checkbox" checked>Pontos</label><label><input id="cad-grid-snap" type="checkbox" checked>Grade</label><label>Passo <input type="number" id="cad-grid-step" value="5" min="0.001" max="1000" step="1" aria-label="Passo da grade">mm</label><label><input id="cad-showdim" type="checkbox" checked>Cotas</label><button id="cad-fit" class="cad-action">Ajustar vista</button></div><svg id="cad-svg" tabindex="0" role="img" aria-label="Área de desenho livre; use as ferramentas e clique para desenhar"></svg><div id="cad-help" class="cad-foot"></div></div><aside class="cad-side cad-props"><h2>Propriedades / Controles</h2><div id="cad-properties"></div><div id="cad-message" class="cad-error" role="status"></div></aside>`;
  $('drawing').append(modes,free,matrix);
  function cadMode(isFree){free.hidden=!isFree;matrix.hidden=isFree;$('cad-mode').setAttribute('aria-pressed',String(isFree));$('matrix-mode').setAttribute('aria-pressed',String(!isFree));cadPoints=[];cadHover=null;cadEntry=null;cadRenderCanvas();}
  $('cad-mode').addEventListener('click',()=>cadMode(true));$('matrix-mode').addEventListener('click',()=>cadMode(false));
@@ -416,6 +453,16 @@ function cadInit(){
  $('cad-criar-furacao').addEventListener('click',()=>{
   const ids=cadFuracaoSelecionados(); if(!ids) return;
   addBloco('furosL',{geo:ids});
+  showStage('planning');
+ });
+ $('cad-criar-contorno').addEventListener('click',()=>{
+  const ids=cadContornoSelecionados(); if(!ids) return;
+  addBloco('contorno',{geo:ids});
+  showStage('planning');
+ });
+ $('cad-criar-faceamento').addEventListener('click',()=>{
+  const ids=cadFaceamentoSelecionados(); if(!ids) return;
+  addBloco('face',{geo:ids});
   showStage('planning');
  });
  $('cad-undo').addEventListener('click',()=>cadHistory(false));$('cad-redo').addEventListener('click',()=>cadHistory(true));
