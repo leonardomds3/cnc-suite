@@ -130,3 +130,40 @@ function coletarWarns(){
   out.push(...avisosRotulosDuplicados(c));
   return out;
 }
+
+/* ============================================================
+   NÚMEROS DA SIMULAÇÃO (painel Simulação, Etapa 10 de INSTRUCAO-CAD-CAM.md)
+   Roda o G-code de cada bloco pelo interpretador (execNC, simulador.js) e
+   soma comprimento/tempo/material removido. G0 não carrega F no G-code —
+   AVANCO_RAPIDO é uma estimativa fixa de avanço rápido só para o cálculo de
+   tempo. Material removido é uma aproximação por varredura cilíndrica do Ø
+   da ferramenta ao longo do percurso de corte (não o volume real da peça,
+   que dependeria do volume() escrito à mão de cada DEFS — que fichas e
+   macros não têm, ver macros.js/fichas.js).
+   ============================================================ */
+const AVANCO_RAPIDO = 8000; // mm/min
+
+function simularEstatisticas(){
+  const c=cfg();
+  let compRapido=0, compCorte=0, tempoRapido=0, tempoCorte=0, volumeMm3=0;
+  SEQ.forEach((b,i)=>{
+    const D=DEFS[b.tipo];
+    const dLocal=b.p.td;
+    const raio=(dLocal>0?dLocal:0)/2;
+    let linhas;
+    try{ linhas=D.gerar(paramsEfetivos(b),c,(i+1)*100,dLocal); }catch(e){ return; }
+    const {segs}=execNC(linhas.join("\n"));
+    segs.forEach(s=>{
+      const dist=Math.hypot(s.bx-s.ax, s.by-s.ay, s.bz-s.az);
+      if(s.rapid){
+        compRapido+=dist;
+        tempoRapido+=dist/AVANCO_RAPIDO;
+      } else {
+        compCorte+=dist;
+        if(s.f>0) tempoCorte+=dist/s.f;
+        volumeMm3+=dist*Math.PI*raio*raio;
+      }
+    });
+  });
+  return { comprimentoMm: compRapido+compCorte, tempoMin: tempoRapido+tempoCorte, volumeMm3 };
+}

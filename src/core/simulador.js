@@ -83,7 +83,7 @@ function execNC(texto){
 
   /* ---- estado da máquina ---- */
   let pos={x:0,y:0,z:0};
-  let motion=0, abs=true, mirrorX=null;
+  let motion=0, abs=true, mirrorX=null, avanco=0;
   let ciclo=null, g98=true, zInicial=0;
   let parado=false, execs=0;
   const MAXE=400000, MAXS=160000;
@@ -99,7 +99,7 @@ function execNC(texto){
   function mx(x){ return mirrorX===null ? x : 2*mirrorX - x; }
   function seg(a,b,rapid){
     if(segs.length>=MAXS) return;
-    segs.push({ax:mx(a.x),ay:a.y,az:a.z, bx:mx(b.x),by:b.y,bz:b.z, rapid});
+    segs.push({ax:mx(a.x),ay:a.y,az:a.z, bx:mx(b.x),by:b.y,bz:b.z, rapid, f:avanco});
   }
   function arco(w,cw){
     const fim=alvo(w);
@@ -171,6 +171,7 @@ function execNC(texto){
       else w[letra]=val;
     }
     if(!ok){ avisos.push("Linha ignorada: "+l); continue; }
+    if(w.F!==undefined) avanco=w.F;
 
     let g53=false, defineCiclo=null;
     gs.forEach(g=>{

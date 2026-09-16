@@ -235,9 +235,16 @@ input:focus,select:focus{border-color:#18b8e6;box-shadow:0 0 0 3px #18b8e622}.ch
 .program-grid .btnrow{flex-wrap:wrap;gap:6px;margin-top:10px}.program-grid .btn{min-width:0;min-height:34px;font-size:12px;padding:7px 8px}.notice{font-size:11px;margin-top:8px;padding:8px;border-radius:3px}
 #warns{max-height:110px;overflow:auto;flex-shrink:0}#warns:empty{display:none}.warnrow,.errrow{font-size:11px;margin:0 0 6px;padding:6px}
 #simulation{display:flex;flex-direction:column;overflow:hidden}#simulation-slot{flex:1;min-height:0}#simulation>.notice{margin:0;border-radius:0}
+.simulation-grid{display:grid;grid-template-columns:200px minmax(0,1fr);flex:1;min-height:0;overflow:hidden}
+.sim-stats{border:0;border-right:1px solid var(--line);border-radius:0;background:#0d2030;overflow:auto;display:flex;flex-direction:column}
+.sim-stats h2{font-size:13px;margin:0 0 14px}
+.sim-stat{display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
+.sim-stat span{font-size:11px;color:var(--ink-2)}
+.sim-stat strong{font-size:19px;color:#59d3f2;font-weight:600}
+.sim-stats .hint{margin-top:auto;margin-bottom:0}
 @media(min-width:1600px){.planning-grid{grid-template-columns:210px minmax(300px,1fr) 340px}}
 @media(max-width:1000px) and (min-width:701px){.suite-shell{grid-template-columns:120px minmax(0,1fr)}.planning-grid{grid-template-columns:150px minmax(180px,1fr) 250px}#inspector .field{grid-template-columns:minmax(0,1fr) 110px}.suite-nav button{font-size:12px}.stage-heading p{display:none}}
-@media(max-width:700px){.suite-top{height:38px}.suite-shell{height:auto;display:block}.suite-main{display:block}.suite-nav{display:grid;grid-template-columns:repeat(3,1fr)}.suite-nav button{min-height:40px}.stage-heading{display:flex}.stage-heading p{display:none}.planning-grid,.program-grid{display:flex;flex-direction:column;overflow:visible}.stage{overflow:visible}.card{border-bottom:1px solid var(--line)}#inspector{border-left:0}#preview-slot{height:380px}#canvasWrap{min-height:260px}.program-grid pre#saida{min-width:max-content}#program-slot>.card{height:440px}.table-scroll{max-height:400px}#simulation-slot{height:430px;flex:auto}.code-scroll{max-height:370px}#inspector input,#inspector select{min-height:40px}#pilha .ib{min-height:40px;width:40px}}
+@media(max-width:700px){.suite-top{height:38px}.suite-shell{height:auto;display:block}.suite-main{display:block}.suite-nav{display:grid;grid-template-columns:repeat(3,1fr)}.suite-nav button{min-height:40px}.stage-heading{display:flex}.stage-heading p{display:none}.planning-grid,.program-grid{display:flex;flex-direction:column;overflow:visible}.stage{overflow:visible}.card{border-bottom:1px solid var(--line)}#inspector{border-left:0}#preview-slot{height:380px}#canvasWrap{min-height:260px}.program-grid pre#saida{min-width:max-content}#program-slot>.card{height:440px}.table-scroll{max-height:400px}#simulation-slot{height:430px;flex:auto}.simulation-grid{display:flex;flex-direction:column;overflow:visible}.sim-stats{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;gap:14px}.sim-stats .hint{width:100%;margin-top:6px}.code-scroll{max-height:370px}#inspector input,#inspector select{min-height:40px}#pilha .ib{min-height:40px;width:40px}}
 
 .draft-grid{display:grid;grid-template-columns:205px minmax(200px,1fr) 290px;gap:0;overflow:hidden}
 .draft-panel{padding:12px;border-right:1px solid var(--line);overflow:auto;min-height:0;background:#0d2030}.draft-panel:last-child{border-right:0;border-left:1px solid var(--line)}
@@ -317,7 +324,12 @@ input:focus,select:focus{border-color:#18b8e6;box-shadow:0 0 0 3px #18b8e622}.ch
       </div>
 </div><aside id="inspector" class="card"><div class="eyebrow">Parâmetros da operação</div><h2 id="inspector-title"></h2><div id="inspector-fields"></div></aside></section>
 
-<section id="simulation" class="stage" hidden><div id="simulation-slot"></div><div class="notice">Prévia de volumes e trajetórias. Reprodução, tempo estimado e remoção de material ainda não implementados. Revise limites e fixação antes de usinar.</div></section>
+<section id="simulation" class="stage" hidden><div class="simulation-grid"><aside class="card sim-stats"><h2>Estimativas</h2>
+  <div class="sim-stat"><span>Tempo estimado</span><strong id="sim-tempo">—</strong></div>
+  <div class="sim-stat"><span>Material removido</span><strong id="sim-material">—</strong></div>
+  <div class="sim-stat"><span>Comprimento da trajetória</span><strong id="sim-comprimento">—</strong></div>
+  <p class="hint">Estimativas — material removido por varredura cilíndrica do percurso (Ø da ferramenta ativa), não o volume real da peça.</p>
+</aside><div id="simulation-slot"></div></div><div class="notice">Prévia de volumes e trajetórias. Reprodução ainda não implementada. Revise limites e fixação antes de usinar.</div></section>
 
 <section id="program" class="stage program-grid" hidden><div id="program-slot">
       <div class="card">
@@ -455,6 +467,7 @@ function refresh(){
   const ws=coletarWarns();
   $("warns").innerHTML=ws.map(w=>`<div class="${w.includes("ERRO:")?"errrow":"warnrow"}">${w.includes("ERRO:")?"⛔":"⚠"} ${w}</div>`).join("");
   refresh3D();
+  renderSimulacao();
   renderLegenda();
   // ex-camada "etapas": cabeçalho e código decorado
   decorateCode();
@@ -465,6 +478,17 @@ function refresh(){
   // ex-camada "desenho 2D": redesenha o CAD guiado e o aviso de sincronismo
   DESENHO2D.render();
   DESENHO2D.avisos();
+}
+
+function renderSimulacao(){
+  const {comprimentoMm, tempoMin, volumeMm3} = simularEstatisticas();
+  const totalSeg = Math.round(tempoMin*60);
+  const hh = String(Math.floor(totalSeg/3600)).padStart(2,"0");
+  const mm = String(Math.floor((totalSeg%3600)/60)).padStart(2,"0");
+  const ss = String(totalSeg%60).padStart(2,"0");
+  $("sim-tempo").textContent = `${hh}:${mm}:${ss}`;
+  $("sim-material").textContent = (volumeMm3/1000).toFixed(1)+" cm³";
+  $("sim-comprimento").textContent = (comprimentoMm/1000).toFixed(1)+" m";
 }
 
 function renderLegenda(){
