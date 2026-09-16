@@ -1,9 +1,9 @@
 # Estado atual — CNC Suite
 
-Atualizado em: 2026-09-14
-Base auditada: 4b72619 (master) — reorganização estrutural concluída (INSTRUCAO-ARQUITETURA.md)
-Etapa: cinco etapas de reorganização de pastas/módulos commitadas; CLAUDE.md/STATUS.md
-sendo fechados nesta entrega final da fase.
+Atualizado em: 2026-09-15
+Base auditada: 54c271c (master) — fase CAD/CAM concluída (INSTRUCAO-CAD-CAM.md)
+Etapa: dez etapas da fase CAD/CAM (seleção de geometria a números da simulação)
+commitadas; CLAUDE.md/STATUS.md sendo fechados nesta entrega final da fase.
 
 ## Direção atual — 12/09/2026
 
@@ -248,3 +248,43 @@ G-code byte a byte idêntico confirmado a cada etapa via `verificar.cjs`; previe
 linha de lógica de usinagem mudou — só a organização em arquivos.
 `CLAUDE.md` atualizado com a estrutura de pastas, a ordem de carga dos scripts e
 a regra de decisão de arquivo novo (`src/core/` vs `src/ui/`).
+
+
+## CAD/CAM no navegador — 14-15/09/2026, concluída (INSTRUCAO-CAD-CAM.md)
+
+As dez etapas da instrução foram aplicadas e commitadas, uma por vez com diff
+próprio, com `ferramentas/verificar.cjs` como teste de regressão principal e
+conferência via `http://localhost:8000` a cada etapa:
+
+- **Etapa 1** (c7b7fb1) — seleção de geometria agrupada por tipo no Desenho 2D
+  (CAD 2D), fundação para apontar operação para geometria.
+- **Etapa 2** (9bf896d) — matriz de furos vira gerador de entidades `circle` no
+  CAD 2D em vez de criar blocos `furosL` direto (regressão temporária e
+  proposital, devolvida pela via nova na Etapa 3).
+- **Etapa 3** (c9cba13) — `src/core/features.js` criado; operação `furosL`
+  ancorada em geometria via `geo`, com o botão "Criar furação".
+- **Etapa 4** (45b99cd) — entrada por valor (clique ou número digitado) em toda
+  ferramenta de desenho; cota nasce como entidade (`type:'dim'`) que lê a
+  medida ao vivo da entidade referenciada.
+- **Etapa 5** (8e37470) — `rect` deixa de ser entidade armazenada: a ferramenta
+  "Retângulo" passa a emitir 4 `line` ligadas (`rectGrupo`); `.json` antigo com
+  `rect` é convertido ao abrir.
+- **Etapa 6** (44a5b4f, 2ffb3e8) — cota nasce junto com a entidade (sem botão de
+  criação separado) e ganha desenho técnico completo (linha de cota, chamadas,
+  setas, `R`/`Ø`, tamanho fixo na tela); aba Parâmetros passa a desenhar a
+  geometria real do CAD (`desenharSVG`) em vez de uma figura genérica.
+- **Etapa 7** (5132eac) — Aparar habilitado: reta contra reta e reta contra
+  arco/círculo; arco aparado e arco×arco ficam fora desta fase.
+- **Etapa 9** (1788548) — contorno automático ancorado em geometria (G41/G42
+  pela compensação da própria máquina, sem calcular offset) e faceamento pela
+  caixa (`FEATURES.limites`) da geometria desenhada.
+- **Etapa 10** (54c271c) — números da simulação: comprimento, tempo estimado e
+  material removido (estimativa), somados a partir dos segmentos do `execNC`.
+
+G-code byte a byte idêntico confirmado a cada etapa via `verificar.cjs`;
+projetos `.json` salvos antes da fase continuam abrindo e gerando o mesmo
+programa. Etapa 8 (aba Parâmetros com geometria real) foi entregue junto da
+Etapa 6 no commit 2ffb3e8. Nenhum teste de máquina.
+`CLAUDE.md` atualizado: `cad2d.js`/`desenho2d.js` (segmentos em vez de `rect`,
+cota como propriedade da entidade, Aparar), a seção de Contorno passou a cobrir
+também o faceamento ancorado, e nova seção para `simularEstatisticas()`.
